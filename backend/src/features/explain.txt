@@ -1,0 +1,51 @@
+1️⃣ auth.controller.js and auth.routes.js
+
+Purpose: Handle authentication (login/register).
+
+What it does:
+
+register → create a new user in the database
+
+login → validate username/password and return a JWT
+
+Routes example:
+
+POST /api/auth/register
+POST /api/auth/login
+
+
+Why it exists: Authentication is separate from other user functionality. Think of it as “how users get into the system.”
+
+2️⃣ users.controller.js and users.routes.js
+
+Purpose: Handle user-related actions after login.
+
+What it does:
+
+getProfile → get info about the logged-in user
+
+adminOnly → routes restricted by role (Owner, Technician, etc.)
+
+Routes example:
+
+GET /api/users/profile      → any logged-in user
+GET /api/users/admin        → only Owner (roleId = 2)
+
+
+Why it exists: Once users are logged in, you may want other features: profile, edit info, list users, delete users, etc.
+
+Key point: auth is for authentication, users is for user management and protected actions.
+
+3️⃣ Why separate them?
+
+Separation of concerns: Auth handles login/register. Users handle all other actions.
+
+Easier to maintain when the app grows. You don’t want your login logic mixed with profile, admin, or CRUD actions.
+
+Makes routes, controllers, and middleware cleaner.
+
+✅ Summary:
+
+Feature	Controller	Routes	Purpose
+auth	auth.controller	auth.routes	Register/login, issue JWT
+users	users.controller	users.routes	Get profile, role-based routes, CRUD actions
