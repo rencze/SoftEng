@@ -1,0 +1,80 @@
+src/
+├─ app/
+│  ├─ login/page.js
+│  ├─ register/page.js
+│  ├─ forgot-password/page.js
+│  └─ dashboard/
+│     ├─ owner/
+│     │  ├─ layout.js          # Sidebar + Navbar
+│     │  ├─ page.js            # Dashboard overview
+│     │  ├─ users/page.js      # Sprint 1
+│     │  ├─ schedule/page.js   # Add Schedule module
+│     │  ├─ bookings/page.js   # Add Booking module
+│     │  ├─ quotations/page.js # Add Quotation module
+│     │  ├─ inventory/page.js  # Inventory Management
+│     │  ├─ services/page.js   # Services / Service Packages
+│     │  ├─ serviceFlow/page.js # Service Job Workflow
+│     │  └─ finance/page.js     # Quotation / Payment / Billing
+│     │
+│     ├─ technician/
+│     │  ├─ layout.js
+│     │  ├─ page.js
+│     │  └─ bookings/page.js    # View / Accept / Decline Bookings
+│     │
+│     └─ customer/
+│        ├─ layout.js
+│        ├─ page.js
+│        └─ bookings/page.js    # Create/View own bookings
+
+src/components/
+├─ Table.js           # Generic table for Users, Bookings, Inventory, Services
+├─ RowItem.js         # Can be reused for each table row type
+├─ Modal.js           # Confirm delete, view details, edit
+├─ Sidebar.js
+├─ Navbar.js
+├─ SearchBar.js       # Search for users, bookings, services
+├─ FilterDropdown.js  # Filter by role, status, service type, etc.
+
+
+
+Owner Dashboard Sidebar (Clean & Collapsible)
+📊 Dashboard
+   └─ Overview
+👥 User Management
+   └─ Users
+📅 Bookings
+   ├─ All Bookings
+   └─ Add Booking
+🕒 Schedules
+   ├─ Technician Schedules
+   └─ Add Schedule
+🚗 Cars
+   └─ Car Profiles
+🛠️ Services Management ▸
+   ├─ Services
+   └─ Service Packages
+🔧 Service Jobs ▸
+   ├─ Service Job Workflow
+   └─ Service History
+📦 Inventory Management ▸
+   ├─ Inventory
+   └─ Parts
+💰 Finance ▸
+   ├─ Quotations
+   ├─ Service Contracts
+   └─ Payments / Billing
+📈 Reports ▸
+   ├─ Booking Reports
+   ├─ Revenue Reports
+   └─ Inventory Reports
+
+
+Notes on Structure
+Collapsible Groups:
+Services Management, Finance, Reports → collapse/expand sub-links.
+Single Links:
+Modules like Dashboard, Users, Bookings, Schedules, Cars → direct links.
+Optional Shortcuts:
+You can add “Add Booking”, “Add Schedule”, etc., as quick action links inside their respective modules.
+Future Scaling:
+If you add more modules (like Notifications, Settings, etc.) → just add them under appropriate groups.

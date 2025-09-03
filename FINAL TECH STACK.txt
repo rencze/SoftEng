@@ -103,7 +103,6 @@ backend/
 ✅ Step 1: Initialize Project
 
 Inside your backend folder:
-
 npm init -y
 
 
@@ -111,11 +110,10 @@ This creates a package.json to track dependencies.
 
 ✅ Step 2: Install Core Dependencies
 Now install the backend tech stack you mentioned:
-npm install express cors bcrypt jsonwebtoken express-validator dotenv
+npm install express cors  jsonwebtoken express-validator dotenv
 
 express → your backend framework
 cors → allows frontend (Next.js) to connect to backend
-bcrypt → hashing passwords
 jsonwebtoken (JWT) → authentication system
 express-validator → input validation (clean request body checking)
 dotenv → load environment variables (secrets, db config, JWT key)

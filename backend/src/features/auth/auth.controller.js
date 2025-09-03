@@ -7,8 +7,9 @@ const { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail }
 async function register(req, res) {
   console.log("✅ Register endpoint hit"); // check if route is called
   console.log("Request body:", req.body); // check what body is received
+  console.log("Raw body string:", req.body);
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, firstName, lastName, contactNumber, adress } = req.body;
 
     if (await findUserByUsername(username))
       return res.status(400).json({ error: "Username already exists" });
@@ -16,7 +17,16 @@ async function register(req, res) {
     if (await findUserByEmail(email))
       return res.status(400).json({ error: "Email already exists" });
 
-    const result = await createUser({ username, email, password });
+    const result = await createUser({ 
+      username, 
+      email, 
+      password,
+      firstName,
+      lastName,
+      contactNumber,
+      adress
+    });
+
     console.log("User created:", result); // confirm DB insert
     res.status(201).json({ message: "User registered successfully", userId: result.insertId });
   } catch (err) {

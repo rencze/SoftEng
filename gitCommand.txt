@@ -1,0 +1,87 @@
+✅ Check which files changed
+1️⃣ git status
+
+Git will show modified, added, or deleted files.
+Only staged files will be included in the commit.
+ Stage the files you want to commit
+To stage all changes:
+
+2️⃣git add .
+
+✅ Check which files changed
+To stage specific files only (safer):
+git add backend/server.js frontend/src/app/page.js
+
+ Commit your changes
+3️⃣git commit -m "Describe what you changed"
+
+
+Use a short, clear description of what you edited or added.
+
+ Push to GitHub
+4️⃣git push
+
+
+Since your main branch is already tracking origin/main, this will upload all committed changes.
+No need to use -u again after the first push.
+💡 Tip: Always check git status before committing to make sure you’re only committing what you want.
+
+Do you want me to do that?
+
+
+let’s break it down really clearly.
+
+1 What is git commit -m "message"?
+1️⃣git commit = “Take a snapshot of my project right now and save it in Git’s history.”
+-m "message" = “Give a short description of what I changed in this snapshot.”
+Think of it like taking a photo of your project, and the message is the label on the photo.
+
+2️⃣ Does it change files?
+No. The commit doesn’t edit or change your files.
+It only records changes you’ve already staged with git add.
+
+Example:
+You edit README.md or server.js.
+You run:
+git add README.md server.js
+
+Now Git is aware of your changes.
+Then you run:
+git commit -m "Updated README and server.js"
+Git saves this snapshot.
+Your files themselves don’t change — you just recorded the edits.
+
+3️⃣ After commit, push to GitHub
+git push
+This uploads your committed snapshot to GitHub.
+Now the changes are live online.
+
+✅ Key idea:
+git add = “Stage these files for saving”
+git commit = “Save a snapshot of the staged files in Git”
+git push = “Upload the saved snapshot to GitHub”
+
+
+File/Folder Colors in VS Code (Git mode)
+Green
+Meaning: Newly added files that are staged (ready to be committed).
+Example: You just created a file and ran git add file.txt.
+
+Light Green (or bright green text)
+Meaning: New files not staged yet (untracked).
+Example: You created a file but haven’t run git add on it.
+
+Blue
+Meaning: Modified files not staged yet.
+Example: You edited an existing file but haven’t staged it.
+
+Orange / Yellow
+Meaning: Modified files that are staged.
+Example: You edited a file and ran git add, but haven’t committed yet.
+
+Red
+Meaning: Deleted files (tracked by Git, removed from folder).
+Example: You deleted a file, but the change hasn’t been committed yet.
+
+Purple / Gray
+Meaning: Ignored files (listed in .gitignore) or files outside Git.

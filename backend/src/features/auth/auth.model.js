@@ -21,13 +21,24 @@ async function findUserByEmail(email) {
 
 // ✅ Create a new user
 async function createUser(user) {
-  const { username, email, password, roleId } = user;
+  const { username, email, password, roleId, firstName, lastName, contactNumber, adress } = user;
+
   const [result] = await pool.query(
-    "INSERT INTO users (username, email, password, roleId) VALUES (?, ?, ?, ?)",
-    [username, email, password, roleId || 3] // default roleId = 3 (Customer)
+    "INSERT INTO users (username, email, password, roleId, firstName, lastName, contactNumber, adress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      username, 
+      email, 
+      password, 
+      roleId || 3, // default roleId = 3 (Customer)
+      firstName,
+      lastName,
+      contactNumber,
+      adress
+    ] 
   );
   return result;
 }
+
 
 // ✅ Update password (forgot password / reset password)
 async function updatePasswordByEmail(email, newPassword) {
