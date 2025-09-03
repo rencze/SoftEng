@@ -59,6 +59,9 @@ Now the changes are live online.
 ✅ Key idea:
 git add = “Stage these files for saving”
 git commit = “Save a snapshot of the staged files in Git”
+
+If it’s the first time pushing that branch, and Git asks for an upstream branch, then run:
+git push -u origin main
 git push = “Upload the saved snapshot to GitHub”
 
 
