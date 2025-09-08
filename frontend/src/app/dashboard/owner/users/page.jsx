@@ -12,10 +12,10 @@ import {
   FaUserCheck,
   FaUserTimes,
   FaDownload,
+  
   FaSort,
   FaUsers
 } from "react-icons/fa";
-import { useRouter } from "next/navigation"; // ✅ add this
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -27,10 +27,17 @@ export default function UsersPage() {
   const [sortField, setSortField] = useState("firstName");
   const [sortDirection, setSortDirection] = useState("asc");
   const [showFilters, setShowFilters] = useState(false);
-
-  // States for editing user
   const [editingUser, setEditingUser] = useState(null); // user being edited
   const [editData, setEditData] = useState({});         // form data for editing
+
+    const [currentUser, setCurrentUser] = useState(null);
+
+    useEffect(() => {
+      const userData = localStorage.getItem("user");
+      if (userData) setCurrentUser(JSON.parse(userData));
+    }, []);
+
+
 
   // Fetch users from backend
   useEffect(() => {
@@ -68,23 +75,52 @@ export default function UsersPage() {
     setUsers(users.filter((u) => !ids.includes(u.userId)));
     setSelected([]);
   };
+///---------vBLOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCK/UNBLOCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCK
+const handleBlockToggle = async (user) => {
+  const action = user.isBlocked ? "unblock" : "block";
+  if (!confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) return;
 
-  // Block/unblock users
-  const handleBlockToggle = async (user) => {
-    const action = user.isBlocked ? "unblock" : "block";
-    if (!confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) return;
-
-    await fetch(`http://localhost:3001/api/users/${user.userId}`, {
+  try {
+    const res = await fetch(`http://localhost:3001/api/users/${user.userId}/block`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...user, isBlocked: user.isBlocked ? 0 : 1 }),
+      body: JSON.stringify({ isBlocked: user.isBlocked ? 0 : 1 }),
     });
-    setUsers(
-      users.map((u) =>
-        u.userId === user.userId ? { ...u, isBlocked: user.isBlocked ? 0 : 1 } : u
-      )
-    );
-  };
+
+    if (res.ok) {
+      setUsers(
+        users.map((u) =>
+          u.userId === user.userId ? { ...u, isBlocked: user.isBlocked ? 0 : 1 } : u
+        )
+      );
+    } else {
+      const data = await res.json();
+      alert(data.message || "Failed to update user status");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error blocking/unblocking user");
+  }
+};
+
+
+
+  // // Block/unblock users
+  // const handleBlockToggle = async (user) => {
+  //   const action = user.isBlocked ? "unblock" : "block";
+  //   if (!confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) return;
+
+  //   await fetch(`http://localhost:3001/api/users/${user.userId}`, {
+  //     method: "PUT",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ ...user, isBlocked: user.isBlocked ? 0 : 1 }),
+  //   });
+  //   setUsers(
+  //     users.map((u) =>
+  //       u.userId === user.userId ? { ...u, isBlocked: user.isBlocked ? 0 : 1 } : u
+  //     )
+  //   );
+  // };
 
   // Sorting
   const handleSort = (field) => {
@@ -96,8 +132,11 @@ export default function UsersPage() {
     }
   };
 
+    const currentUserId = currentUser?.userId; // get the logged-in user's ID
+
   // Filter + search + sort
   const filteredUsers = users
+    .filter(u => u.userId !== currentUserId) // exclude logged-in user
     .filter((u) => {
       const searchText = search.toLowerCase();
       const matchesSearch = 
@@ -148,44 +187,62 @@ export default function UsersPage() {
       : "bg-green-100 text-green-700 border-green-200";
   };
 
-  // Open edit modal
-  const openEdit = (user) => {
-    setEditingUser(user);
-    setEditData({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      contactNumber: user.contactNumber,
-      address: user.address,
-      roleId: user.roleId
+ // Open edit modal
+const openEdit = (user) => {
+  setEditingUser(user);
+  setEditData({
+    firstName: user.firstName,
+    lastName: user.lastName,
+    contactNumber: user.contactNumber,
+    address: user.address,
+    roleName: user.roleName // initialize dropdown
+  });
+};
+
+// Mapping role names to role IDs
+const roleMap = { Customer: 3, Technician: 1, Owner: 2 };
+
+// Handle edit field changes
+const handleEditChange = (e) => {
+  const { name, value } = e.target;
+  setEditData(prev => ({ ...prev, [name]: value }));
+};
+
+// Submit edited data
+const submitEdit = async () => {
+  try {
+    const payload = {
+      firstName: editData.firstName,
+      lastName: editData.lastName,
+      contactNumber: editData.contactNumber,
+      address: editData.address,
+      roleId: roleMap[editData.roleName], // convert roleName to roleId
+      isBlocked: editingUser.isBlocked    // keep current block status
+    };
+
+    const res = await fetch(`http://localhost:3001/api/users/${editingUser.userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-  };
 
-  // Handle edit field changes
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Submit edited data
-  const submitEdit = async () => {
-    try {
-      const res = await fetch(`http://localhost:3001/api/users/${editingUser.userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData)
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUsers(users.map(u => u.userId === editingUser.userId ? { ...u, ...editData } : u));
-        setEditingUser(null); // close modal
-      } else {
-        alert(data.error || "Failed to update user");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating user");
+    const data = await res.json();
+    if (res.ok) {
+      setUsers(users.map(u => 
+        u.userId === editingUser.userId 
+          ? { ...u, ...editData, roleId: payload.roleId, roleName: editData.roleName } 
+          : u
+      ));
+      setEditingUser(null); // close modal
+    } else {
+      alert(data.error || "Failed to update user");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Error updating user");
+  }
+};
+
 
   if (loading) {
     return (
@@ -560,7 +617,6 @@ export default function UsersPage() {
             </div>
           </div>
         )}
-
 
       {/* Pagination (if needed) */}
       {filteredUsers.length > 0 && (

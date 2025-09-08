@@ -1,14 +1,21 @@
 // src/features/users/users.controller.js
-const { getAllUsers, updateUser, deleteUser } = require("./users.model");
+const { getAllUsers, updateUser, deleteUser, updateUserBlockStatus,findUserById } = require("./users.model");
 
-// Get the profile of the logged-in user
-function getProfile(req, res) {
-  res.json({ message: "This is your profile", user: req.user });
+async function getProfile(req, res) {
+  try {
+    const user = await findUserById(req.user.userId, true); // include roleName
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
 // Accessible only by Owner (roleId = 2)
 function adminOnly(req, res) {
   res.json({ message: "Welcome, Owner!" });
+
 }
 
 // Get all users
@@ -43,4 +50,24 @@ async function removeUser(req, res) {
   }
 }
 
-module.exports = { getProfile, adminOnly, getUsers, editUser, removeUser };
+// Block/unblock
+async function toggleBlockUser(req, res) {
+  try {
+    const { id } = req.params;
+    const { isBlocked } = req.body;
+
+    const result = await updateUserBlockStatus(id, isBlocked);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: isBlocked ? "User blocked successfully" : "User unblocked successfully",
+    });
+  } catch (err) {
+    console.error("Block/unblock error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+module.exports = { getProfile, adminOnly, getUsers, editUser, removeUser, toggleBlockUser };

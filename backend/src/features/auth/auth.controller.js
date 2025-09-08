@@ -3,13 +3,11 @@ const jwt = require("jsonwebtoken");
 const SECRET = process.env.JWT_SECRET || "supersecretkey";
 const { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail } = require("./auth.model");
 
-//  1. REGISTER
+
+// 1. REGISTER
 async function register(req, res) {
-  console.log("✅ Register endpoint hit"); // check if route is called
-  console.log("Request body:", req.body); // check what body is received
-  console.log("Raw body string:", req.body);
   try {
-    const { username, email, password, firstName, lastName, contactNumber, adress } = req.body;
+    const { username, email, password, firstName, lastName, contactNumber, address } = req.body;
 
     if (await findUserByUsername(username))
       return res.status(400).json({ error: "Username already exists" });
@@ -17,17 +15,16 @@ async function register(req, res) {
     if (await findUserByEmail(email))
       return res.status(400).json({ error: "Email already exists" });
 
-    const result = await createUser({ 
-      username, 
-      email, 
+    const result = await createUser({
+      username,
+      email,
       password,
       firstName,
       lastName,
       contactNumber,
-      adress
+      address
     });
 
-    console.log("User created:", result); // confirm DB insert
     res.status(201).json({ message: "User registered successfully", userId: result.insertId });
   } catch (err) {
     console.error("Register error:", err);
@@ -42,12 +39,26 @@ async function login(req, res) {
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
+    // ✅ Actually fetch the user
     const user = await findUserByUsername(username);
-    if (!user || user.password !== password)
-      return res.status(401).json({ message: "Invalid username or password" });
 
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    // 🔴 Check if blocked
+    if (user.isBlocked && user.isBlocked === 1) {
+      return res.status(403).json({ message: "Your account is blocked. Contact support." });
+    }
+
+    // ⚠️ Password check (no hashing in your setup)
+    if (user.password !== password) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    // ✅ Generate token
     const token = jwt.sign(
-      { userId: user.userId || user.id, roleId: user.roleId, username: user.username },
+      { userId: user.userId, roleId: user.roleId, username: user.username },
       SECRET,
       { expiresIn: "1h" }
     );
@@ -55,12 +66,71 @@ async function login(req, res) {
     res.json({
       message: "Login successful",
       token,
-      user: { userId: user.userId || user.id, username: user.username, email: user.email, roleId: user.roleId },
+      user: {
+    userId: user.userId,
+    username: user.username,
+    email: user.email,
+    roleId: user.roleId,
+    firstName: user.firstName,
+    lastName: user.lastName,
+  },
+      // user: {
+      //   userId: user.userId,
+      //   username: user.username,
+      //   email: user.email,
+      //   roleId: user.roleId,
+      // },
     });
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
 }
+
+
+
+// //  2. LOGIN
+// async function login(req, res) {
+//   try {
+//     const { username, password } = req.body;
+//     if (!username || !password)
+//       return res.status(400).json({ message: "Username and password required" });
+
+//     // const user = await findUserByUsername(username);
+//     // if (!user || user.password !== password)
+//     //   return res.status(401).json({ message: "Invalid username or password" });
+
+    
+//     if (!user) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+//     // 🔴 Check if blocked
+//     if (user.isBlocked && user.isBlocked === 1) {
+//       return res.status(403).json({ message: "Your account is blocked. Contact support." });
+//     }
+
+//     // ⚠️ Password check (no hashing in your setup)
+//     if (user.password !== password) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+      
+//     const token = jwt.sign(
+//       { userId: user.userId || user.id, roleId: user.roleId, username: user.username },
+//       SECRET,
+//       { expiresIn: "1h" }
+//     );
+
+//     res.json({
+//       message: "Login successful",
+//       token,
+//       user: { userId: user.userId || user.id, username: user.username, email: user.email, roleId: user.roleId },
+//     });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// }
 
 //  3. FORGOT PASSWORD (request)
 async function forgotPassword(req, res) {
@@ -96,5 +166,6 @@ async function resetPassword(req, res) {
   }
 }
 
-module.exports = { register, login, forgotPassword, resetPassword};
+
+module.exports = { register, login, forgotPassword, resetPassword, };
 

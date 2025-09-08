@@ -20,14 +20,7 @@ import axios from "axios";
 export default function DashboardPage() {
   const [userCount, setUserCount] = useState(0);
   const [loading, setLoading] = useState(true);
-// Purpose: Keeps track of which user is currently being edited.
-// Initial value: null → means no user is being edited yet.
-// When you click the Edit button, you set this to the selected user:
-  const [editingUser, setEditingUser] = useState(null); //setEditingUser(null); // close modal
-//Purpose: Stores the current form values for the user being edited.
-// Initial value: {} → empty object.
-// When you open the modal, you fill it with the user's current info:
-  const [editData, setEditData] = useState({});
+
 
 
   // Fetch users from backend
@@ -123,8 +116,8 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
-      title: "Add New User",
-      description: "Create a new user account",
+      title: "Generate Schedule",
+      description: "Create a technician schedule",
       icon: <FaUserPlus className="text-blue-500 text-xl" />,
       color: "border-blue-200 hover:border-blue-300 hover:bg-blue-50"
     },
@@ -328,80 +321,4 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
-
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import { FaUsers, FaClipboardList, FaFileInvoiceDollar } from "react-icons/fa";
-// import axios from "axios";
-
-// export default function DashboardPage() {
-//   const [userCount, setUserCount] = useState(0);
-
-//   // Fetch users from backend
-//   async function fetchUsers() {
-//     try {
-//       const res = await axios.get("http://localhost:3001/api/users"); // adjust URL if needed
-//       setUserCount(res.data.length);
-//     } catch (err) {
-//       console.error("Error fetching users:", err);
-//     }
-//   }
-
-//   useEffect(() => {
-//     fetchUsers();
-//   }, []);
-
-//   const stats = [
-//     {
-//       title: "Total Users",
-//       value: userCount, // dynamically from DB
-//       icon: <FaUsers className="text-white text-2xl" />,
-//       bg: "bg-blue-500",
-//     },
-//     { title: "Pending Bookings", value: 12, icon: <FaClipboardList className="text-white text-2xl" />, bg: "bg-yellow-500" },
-//     { title: "Pending Quotations", value: 5, icon: <FaFileInvoiceDollar className="text-white text-2xl" />, bg: "bg-green-500" },
-//   ];
-
-//   return (
-//     <div>
-//       <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard Overview</h1>
-
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//         {stats.map((stat, index) => (
-//           <div
-//             key={index}
-//             className="flex items-center p-6 bg-white rounded-xl shadow hover:shadow-lg transition-shadow duration-300"
-//           >
-//             <div className={`${stat.bg} p-4 rounded-full mr-4 flex items-center justify-center`}>
-//               {stat.icon}
-//             </div>
-//             <div>
-//               <p className="text-gray-500 font-medium">{stat.title}</p>
-//               <p className="text-3xl font-bold text-gray-800 mt-1">{stat.value}</p>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* Optional charts section */}
-//       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-//         <div className="bg-white p-6 rounded-xl shadow">
-//           <h2 className="font-semibold text-gray-700 mb-4">Bookings This Month</h2>
-//           <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-//             Chart goes here
-//           </div>
-//         </div>
-//         <div className="bg-white p-6 rounded-xl shadow">
-//           <h2 className="font-semibold text-gray-700 mb-4">New Users This Month</h2>
-//           <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-//             Chart goes here
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
 

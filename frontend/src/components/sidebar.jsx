@@ -12,7 +12,9 @@ import {
   FaSignOutAlt,
   FaUserCircle,
   FaClipboardList,
-  FaBoxes 
+  FaBoxes,
+  FaTasks,
+  FaBell
 } from "react-icons/fa";
 
 // Reusable Logout Button
@@ -41,6 +43,14 @@ export default function Sidebar({ isOpen }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    setCurrentUser(JSON.parse(userData));
+  }
+}, []);
 
   const toggleMenu = (menuName) => {
     setOpenMenu(openMenu === menuName ? null : menuName);
@@ -50,67 +60,77 @@ export default function Sidebar({ isOpen }) {
   const hasActiveSublink = (subLinks) => 
     subLinks?.some(sublink => pathname === sublink.path);
 
-const links = [
-  { 
-    name: "Dashboard", 
-    path: "/dashboard/owner", 
-    icon: <FaTachometerAlt />,
-    color: "blue"
-  },
+      const links = [
+        { 
+          name: "Dashboard", 
+          path: "/dashboard/owner", 
+          icon: <FaTachometerAlt />,
+          color: "blue"
+        },
 
-  {
-    name: "User Management",
-    icon: <FaUsers />,
-    color: "green",
-    subLinks: [
-      { name: "Technicians", path: "/dashboard/owner/technicians" },
-      { name: "Customers", path: "/dashboard/owner/users" },
-    ],
-  },
+        {
+          name: "User Management",
+          icon: <FaUsers />,
+          color: "green",
+          subLinks: [
+            { name: "Technicians", path: "/dashboard/owner/technicians" },
+            { name: "Users", path: "/dashboard/owner/users" },
+          ],
+        },
 
-  {
-    name: "Services Management",
-    icon: <FaTools />,
-    color: "purple",
-    subLinks: [
-      { name: "Services", path: "/dashboard/owner/services" },
-      { name: "Service Packages", path: "/dashboard/owner/service-packages" },
-    ],
-  },
+        {
+          name: "Services Management",
+          icon: <FaTools />,
+          color: "purple",
+          subLinks: [
+            { name: "Services", path: "/dashboard/owner/services" },
+            { name: "Service Packages", path: "/dashboard/owner/services/service-packages" },
+          ],
+        },
 
-  {
-    name: "Booking & Jobs",
-    icon: <FaClipboardList />,
-    color: "yellow",
-    subLinks: [
-      { name: "Bookings", path: "/dashboard/owner/bookings" },
-      { name: "Quotations", path: "/dashboard/owner/quotations" },
-      { name: "Service Jobs", path: "/dashboard/owner/service-jobs" },
-      { name: "Task / Workflow", path: "/dashboard/owner/tasks" },
-      { name: "Contracts", path: "/dashboard/owner/contracts" },
-    ],
-  },
+        // 🔹 Booking Section
+        {
+          name: "Booking",
+          icon: <FaClipboardList />,
+          color: "yellow",
+          subLinks: [
+            { name: "Bookings", path: "/dashboard/owner/bookings" },
+            { name: "Quotations", path: "/dashboard/owner/quotations" },
+            { name: "Contracts", path: "/dashboard/owner/contracts" },
+            { name: "Schedules", path: "/dashboard/owner/technician-schedules" }, // ✅ added schedule
+          ],
+        },
 
-  {
-    name: "Finance",
-    icon: <FaFileInvoiceDollar />,
-    color: "orange",
-    subLinks: [
-      { name: "Payments / Billing", path: "/dashboard/owner/payments" },
-    ],
-  },
-      {
-      name: "Inventory",
-      icon: <FaBoxes />,   // from react-icons/fa
-      color: "teal",
-      subLinks: [
-        { name: "Parts", path: "/dashboard/owner/parts" },
-        { name: "Stock In/Out", path: "/dashboard/owner/stock" },
-      ],
-    },
-  ];
+        // 🔹 Jobs Section
+        {
+          name: "Jobs",
+          icon: <FaTasks />,
+          color: "red",
+          subLinks: [
+            { name: "Service Jobs", path: "/dashboard/owner/service-jobs" },
+            { name: "Task / Workflow", path: "/dashboard/owner/tasks" },
+          ],
+        },
 
+        {
+          name: "Finance",
+          icon: <FaFileInvoiceDollar />,
+          color: "orange",
+          subLinks: [
+            { name: "Payments / Billing", path: "/dashboard/owner/payments" },
+          ],
+        },
 
+        {
+          name: "Inventory",
+          icon: <FaBoxes />,
+          color: "teal",
+          subLinks: [
+            { name: "Parts", path: "/dashboard/owner/inventory" },
+            { name: "Stock In/Out", path: "/dashboard/owner/stock" },
+          ],
+        },
+      ];
 
   const getColorClasses = (color, isActive = false, isHovered = false) => {
     const colors = {
@@ -183,18 +203,35 @@ const links = [
         )}
       </div>
 
-      {/* User Profile Section */}
-      {isOpen && (
-        <div className="px-4 py-4 bg-white border-b border-gray-100">
-          <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-            <FaUserCircle className="text-2xl text-gray-400" />
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 text-sm truncate">Lawrence Gonzaga</p>
-              <p className="text-xs text-gray-500 truncate">Owner System Administrator</p>
-            </div>
-          </div>
-        </div>
-      )}
+{/* User Profile Section */}
+{isOpen && (
+  <div className="px-4 py-4 bg-white border-b border-gray-100">
+    <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+      <FaUserCircle className="text-2xl text-gray-400" />
+      <div className="flex-1 min-w-0">
+        {currentUser && (
+          <p className="font-medium text-gray-900 text-sm truncate">
+            {currentUser.firstName && currentUser.lastName
+              ? `${currentUser.firstName} ${currentUser.lastName}`
+              : currentUser.username || "User"}
+          </p>
+        )}
+        <p className="text-xs text-gray-500 truncate">
+          Owner System Administrator
+        </p>
+      </div>
+
+      {/* 🔔 Notification button */}
+      <button className="ml-auto p-2 hover:bg-slate-700/50 rounded-xl transition-colors">
+        <FaBell className="text-slate-400 hover:text-white transition-colors" />
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
 
       {/* Navigation Links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -278,18 +315,36 @@ const links = [
       {/* Bottom Section */}
       <div className="px-3 py-4 border-t border-gray-200 bg-white space-y-2">
         {/* Settings */}
-        <button className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200">
-          <FaCog className="text-lg" />
-          {isOpen && <span className="font-medium">Settings</span>}
+        <button className="group w-full flex items-center space-x-4 px-4 py-3 rounded-2xl text-gray-600 bg-white hover:bg-blue-600 hover:text-white transition-all duration-300 border border-transparent hover:border-blue-500">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 group-hover:bg-blue-500 transition-all duration-300">
+            <FaCog className="text-lg transition-transform duration-300 group-hover:rotate-90 group-hover:text-white" />
+          </div>
+          {isOpen && <span className="font-medium text-base">Settings</span>}
         </button>
 
-        {/* Logout */}
-        <LogoutButton isOpen={isOpen} />
+
+            {/* Logout */}
+        <Link href="/landing-page">
+          <button className="group w-full flex items-center space-x-4 px-4 py-3 
+                            rounded-2xl text-gray-600 bg-white 
+                            hover:bg-red-600 hover:text-white 
+                            transition-all duration-300 transform hover:scale-[1.02]
+                            border border-transparent hover:border-red-500 hover:shadow-md hover:shadow-red-200/50">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center 
+                            bg-gray-100 group-hover:bg-red-500 
+                            transition-all duration-300 transform group-hover:scale-110">
+              <FaSignOutAlt className="text-lg text-gray-600 group-hover:text-white 
+                                      transition-transform duration-300" />
+            </div>
+            {isOpen && <span className="font-medium text-base">Logout</span>}
+          </button>
+        </Link>
+        {/* <LogoutButton isOpen={isOpen} /> */}
 
         {/* Copyright */}
         {isOpen && (
           <div className="px-3 pt-4 text-center">
-            <p className="text-xs text-gray-400">© 2025 Lawrence Gonzaga only</p>
+            <p className="text-xs text-gray-400">© 2025 Lawrence Gonzaga</p>
             <p className="text-xs text-gray-400">All rights reserved</p>
           </div>
         )}
@@ -297,3 +352,25 @@ const links = [
     </aside>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
