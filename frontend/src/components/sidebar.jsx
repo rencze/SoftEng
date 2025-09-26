@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
+  FaCar,
   FaTachometerAlt, 
   FaUsers, 
   FaTools, 
@@ -19,31 +21,54 @@ import {
 
 // Reusable Logout Button
 function LogoutButton({ isOpen, className }) {
-  const router = useRouter();
+          const { logout } = useAuth();
+        const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/auth/login");
-    // window.location.reload(); // Prevent back-button cache
-  };
+
+          const handleLogout = () => {
+          logout();            // remove user globally
+          router.push("/");    // redirect to landing page
+        };
+
+
+  // const handleLogout = () => {
+  //   localStorage.removeItem("token");
+  //   localStorage.removeItem("user");
+  //   router.push("/auth/login");
+  //   // window.location.reload(); // Prevent back-button cache
+  // };
 
   return (
     <button
       onClick={handleLogout}
-      className={`flex items-center space-x-3 px-3 py-2 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 ${className}`}
+      className="group w-full flex items-center space-x-4 px-4 py-3 
+                 rounded-2xl text-gray-600 bg-white 
+                 hover:bg-red-600 hover:text-white 
+                 transition-all duration-300 transform hover:scale-[1.02]
+                 border border-transparent hover:border-red-500 hover:shadow-md hover:shadow-red-200/50"
     >
-      <FaSignOutAlt className="text-lg" />
-      {isOpen && <span className="font-medium">Logout</span>}
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center 
+                   bg-gray-100 group-hover:bg-red-500 
+                   transition-all duration-300 transform group-hover:scale-110"
+      >
+        <FaSignOutAlt
+          className="text-lg text-gray-600 group-hover:text-white 
+                     transition-transform duration-300"
+        />
+      </div>
+      {isOpen && <span className="font-medium text-base">Logout</span>}
     </button>
   );
 }
 
 export default function Sidebar({ isOpen }) {
+  
   const [openMenu, setOpenMenu] = useState(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState(null);
+
 
   useEffect(() => {
   const userData = localStorage.getItem("user");
@@ -88,6 +113,16 @@ export default function Sidebar({ isOpen }) {
           ],
         },
 
+          {
+            name: "Vehicles Management",
+            icon: <FaCar  />,
+            color: "yellow",
+            subLinks: [
+              { name: "Vehicles", path: "/dashboard/owner/vehicles" },
+              { name: "Register Vehicle", path: "/dashboard/owner/vehicles/register" },
+            ],
+          },
+ 
         // 🔹 Booking Section
         {
           name: "Booking",
@@ -228,11 +263,6 @@ export default function Sidebar({ isOpen }) {
     </div>
   </div>
 )}
-
-
-
-
-
       {/* Navigation Links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {links.map((link, idx) => {
@@ -323,8 +353,11 @@ export default function Sidebar({ isOpen }) {
         </button>
 
 
+            
             {/* Logout */}
-        <Link href="/landing-page">
+        <LogoutButton isOpen={isOpen} className="w-full" />
+
+        {/* <Link href="/landing-page">
           <button className="group w-full flex items-center space-x-4 px-4 py-3 
                             rounded-2xl text-gray-600 bg-white 
                             hover:bg-red-600 hover:text-white 
@@ -338,7 +371,7 @@ export default function Sidebar({ isOpen }) {
             </div>
             {isOpen && <span className="font-medium text-base">Logout</span>}
           </button>
-        </Link>
+        </Link> */}
         {/* <LogoutButton isOpen={isOpen} /> */}
 
         {/* Copyright */}
@@ -352,14 +385,6 @@ export default function Sidebar({ isOpen }) {
     </aside>
   );
 }
-
-
-
-
-
-
-
-
 
 
 

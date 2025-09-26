@@ -1,45 +1,35 @@
-// src/app/dashboard/owner/services/page.jsx
 "use client";
 
-import { useState } from "react";
-import { 
-  FaPlus, 
-  FaEdit, 
-  FaTrash, 
-  FaTag
-} from "react-icons/fa";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { FaPlus, FaEdit, FaTrash, FaTag, FaTimes } from "react-icons/fa";
+
+const API_URL = "http://localhost:3001/api/services";
 
 export default function ServicesPage() {
-  const [services, setServices] = useState([
-    {
-      serviceId: 1,
-      serviceName: "Aircon Cleaning",
-      description: "Deep cleaning of car air conditioning system.",
-      price: 1500,
-    },
-    {
-      serviceId: 2,
-      serviceName: "Freon Refill",
-      description: "Refill freon for optimal cooling performance.",
-      price: 1200,
-    },
-    {
-      serviceId: 3,
-      serviceName: "Full Diagnostics",
-      description: "Comprehensive system check for leaks and issues.",
-      price: 2000,
-    },
-  ]);
-
+  const [services, setServices] = useState([]);
   const [search, setSearch] = useState("");
   const [editingService, setEditingService] = useState(null);
-  const [serviceData, setServiceData] = useState({
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [serviceForm, setServiceForm] = useState({
     serviceName: "",
     description: "",
-    price: ""
+    price: "",
   });
 
-  // Format PHP Currency
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      setServices(res.data);
+    } catch (err) {
+      console.error("Error fetching services:", err);
+    }
+  };
+
   const formatCurrency = (value) => {
     if (!value) return "₱0.00";
     return new Intl.NumberFormat("en-PH", {
@@ -49,55 +39,96 @@ export default function ServicesPage() {
     }).format(value);
   };
 
-  // Modal Open
   const openModal = (service = null) => {
     if (service) {
       setEditingService(service);
-      setServiceData({
-        serviceName: service.serviceName,
-        description: service.description,
-        price: service.price
+      setServiceForm({
+        serviceName: service.servicesName || service.serviceName,
+        description: service.servicesDescription || service.description,
+        price: service.price,
       });
     } else {
       setEditingService(null);
-      setServiceData({ serviceName: "", description: "", price: "" });
+      setServiceForm({ serviceName: "", description: "", price: "" });
+    }
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingService(null);
+    setServiceForm({ serviceName: "", description: "", price: "" });
+  };
+
+  // Block negative numbers and "e" from being typed
+  const handlePriceKeyDown = (e) => {
+    if (e.key === "-" || e.key === "e" || e.key === "E") {
+      e.preventDefault();
     }
   };
 
-  // Input Change
+  // Prevent pasting negative values
+  const handlePricePaste = (e) => {
+    const pasteData = e.clipboardData.getData("Text");
+    if (pasteData.includes("-") || isNaN(pasteData)) {
+      e.preventDefault();
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setServiceData((prev) => ({ ...prev, [name]: value }));
-  };
 
-  // Save Service
-  const saveService = () => {
-    if (editingService) {
-      setServices(services.map((s) =>
-        s.serviceId === editingService.serviceId ? { ...s, ...serviceData, price: Number(serviceData.price) } : s
-      ));
-      setEditingService(null);
-    } else {
-      const newService = {
-        serviceId: Date.now(),
-        ...serviceData,
-        price: Number(serviceData.price),
-      };
-      setServices([...services, newService]);
+    if (name === "price") {
+      const num = Number(value);
+      if (num < 0) return; // prevent negative number
     }
-    setServiceData({ serviceName: "", description: "", price: "" });
+
+    setServiceForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Delete Service
-  const deleteService = (id) => {
+  const saveService = async () => {
+    const price = Number(serviceForm.price);
+    if (price < 0) {
+      alert("Price cannot be negative!");
+      return;
+    }
+
+    const payload = {
+      servicesName: serviceForm.serviceName,
+      servicesDescription: serviceForm.description,
+      price,
+    };
+
+    try {
+      if (editingService) {
+        const id = editingService.servicesId || editingService.serviceId;
+        await axios.put(`${API_URL}/${id}`, payload);
+      } else {
+        await axios.post(API_URL, payload);
+      }
+
+      fetchServices();
+      closeModal();
+    } catch (err) {
+      console.error("Error saving service:", err);
+    }
+  };
+
+  const deleteService = async (service) => {
     if (!confirm("Are you sure you want to delete this service?")) return;
-    setServices(services.filter((s) => s.serviceId !== id));
+    try {
+      const id = service.servicesId || service.serviceId;
+      await axios.delete(`${API_URL}/${id}`);
+      fetchServices();
+    } catch (err) {
+      console.error("Error deleting service:", err);
+    }
   };
 
-  // Filter services
-  const filteredServices = services.filter((s) =>
-    s.serviceName.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredServices = services.filter((s) => {
+    const name = s.servicesName || s.serviceName || "";
+    return name.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -137,86 +168,117 @@ export default function ServicesPage() {
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Service Name</th>
-              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Description</th>
-              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Price</th>
-              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">
+                Service Name
+              </th>
+              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">
+                Description
+              </th>
+              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">
+                Price
+              </th>
+              <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredServices.map((s) => (
-              <tr key={s.serviceId} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-4 flex items-center gap-2 font-semibold text-gray-800">
-                  <FaTag className="text-blue-500" /> {s.serviceName}
-                </td>
-                <td className="px-6 py-4 text-gray-600">{s.description}</td>
-                <td className="px-6 py-4 text-green-600 font-medium">
-                  {formatCurrency(s.price)}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => openModal(s)}
-                      className="text-blue-600 hover:text-blue-800 transition"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      onClick={() => deleteService(s.serviceId)}
-                      className="text-red-600 hover:text-red-800 transition"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
+            {filteredServices.length > 0 ? (
+              filteredServices.map((s) => (
+                <tr
+                  key={s.servicesId || s.serviceId}
+                  className="hover:bg-gray-50 transition"
+                >
+                  <td className="px-6 py-4 flex items-center gap-2 font-semibold text-gray-800">
+                    <FaTag className="text-blue-500" />{" "}
+                    {s.servicesName || s.serviceName}
+                  </td>
+                  <td className="px-6 py-4 text-gray-600">
+                    {s.servicesDescription || s.description}
+                  </td>
+                  <td className="px-6 py-4 text-green-600 font-medium">
+                    {formatCurrency(s.price)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => openModal(s)}
+                        className="text-blue-600 hover:text-blue-800 transition"
+                      >
+                        <FaEdit />
+                      </button>
+
+                 {false && (     <button
+                        onClick={() => deleteService(s)}
+                        className="text-red-600 hover:text-red-800 transition"
+                      >
+                        <FaTrash />
+                      </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="text-center py-12 text-gray-500"
+                >
+                  No services found
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
-
-        {filteredServices.length === 0 && (
-          <div className="text-center py-12 text-gray-500">No services found</div>
-        )}
       </div>
 
       {/* Modal */}
-      {(editingService || serviceData.serviceName !== "") && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl animate-fadeIn">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">
-              {editingService ? "Edit Service" : "Add Service"}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingService ? "Edit Service" : "Add Service"}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes />
+              </button>
+            </div>
             <div className="space-y-3">
               <input
                 type="text"
                 name="serviceName"
                 placeholder="Service Name"
-                value={serviceData.serviceName}
+                value={serviceForm.serviceName}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <textarea
                 name="description"
                 placeholder="Description"
-                value={serviceData.description}
+                value={serviceForm.description}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                rows="3"
               />
               <input
                 type="number"
                 name="price"
                 placeholder="Price"
-                value={serviceData.price}
+                value={serviceForm.price}
                 onChange={handleChange}
+                onKeyDown={handlePriceKeyDown}
+                onPaste={handlePricePaste}
                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={() => {
-                  setEditingService(null);
-                  setServiceData({ serviceName: "", description: "", price: "" });
-                }}
+                onClick={closeModal}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
               >
                 Cancel

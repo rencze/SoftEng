@@ -20,23 +20,7 @@
   }
 }
 
-  // Get all users BY
-    // SELECT 
-    //   u.userId,
-    //   u.username,
-    //   u.email,
-    //   u.firstName,
-    //   u.lastName,
-    //   u.contactNumber,
-    //   u.address,
-    //   u.isBlocked,
-    //   u.createdAt,
-    //   u.updatedAt,
-    //   r.roleName
-    // FROM users u
-    // JOIN roles r 
-    //   ON u.roleId = r.roleId
-
+ 
   async function getAllUsers() {
     const [rows] = await pool.query(
         `SELECT u.*, r.roleName
@@ -47,17 +31,36 @@
     return rows;
   }
 
-  // Update user (edit)
   async function updateUser(userId, data) {
-    const { firstName, lastName, contactNumber, address, roleId, isBlocked } = data;
-    const [result] = await pool.query(
-      `UPDATE users 
-      SET firstName=?, lastName=?, contactNumber=?, address=?, roleId=?, isBlocked=? 
-      WHERE userId=?`,
-      [firstName, lastName, contactNumber, address, roleId, isBlocked, userId]
+  const { firstName, lastName, contactNumber, address, roleId, isBlocked } = data;
+
+  const [result] = await pool.query(
+    `UPDATE users 
+     SET firstName=?, lastName=?, contactNumber=?, address=?, roleId=?, isBlocked=? 
+     WHERE userId=?`,
+    [firstName, lastName, contactNumber, address, roleId, isBlocked, userId]
+  );
+
+  // 🔄 Sync with technicians table
+  if (roleId === 1) {
+    // Insert into technicians if not exists
+    await pool.query(
+      `INSERT INTO technicians (userId)
+       VALUES (?)
+       ON DUPLICATE KEY UPDATE updatedAt = CURRENT_TIMESTAMP`,
+      [userId]
     );
-    return result;
+  } else {
+    // If role is changed away from Technician → remove or deactivate
+    await pool.query(
+      `DELETE FROM technicians WHERE userId = ?`,
+      [userId]
+    );
   }
+
+  return result;
+}
+
 
   // Delete user
   async function deleteUser(userId) {

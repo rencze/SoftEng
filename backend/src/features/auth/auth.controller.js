@@ -32,7 +32,7 @@ async function register(req, res) {
   }
 }
 
-//  2. LOGIN
+// 2. LOGIN
 async function login(req, res) {
   try {
     const { username, password } = req.body;
@@ -87,50 +87,6 @@ async function login(req, res) {
   }
 }
 
-
-
-// //  2. LOGIN
-// async function login(req, res) {
-//   try {
-//     const { username, password } = req.body;
-//     if (!username || !password)
-//       return res.status(400).json({ message: "Username and password required" });
-
-//     // const user = await findUserByUsername(username);
-//     // if (!user || user.password !== password)
-//     //   return res.status(401).json({ message: "Invalid username or password" });
-
-    
-//     if (!user) {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
-
-//     // 🔴 Check if blocked
-//     if (user.isBlocked && user.isBlocked === 1) {
-//       return res.status(403).json({ message: "Your account is blocked. Contact support." });
-//     }
-
-//     // ⚠️ Password check (no hashing in your setup)
-//     if (user.password !== password) {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
-
-      
-//     const token = jwt.sign(
-//       { userId: user.userId || user.id, roleId: user.roleId, username: user.username },
-//       SECRET,
-//       { expiresIn: "1h" }
-//     );
-
-//     res.json({
-//       message: "Login successful",
-//       token,
-//       user: { userId: user.userId || user.id, username: user.username, email: user.email, roleId: user.roleId },
-//     });
-//   } catch (err) {
-//     res.status(500).json({ message: "Server error" });
-//   }
-// }
 
 //  3. FORGOT PASSWORD (request)
 async function forgotPassword(req, res) {
