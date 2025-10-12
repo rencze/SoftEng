@@ -11,20 +11,6 @@ async function syncTechnicians() {
   `);
 }
 
-// Get all technicians (for display only)
-
-// SELECT 
-//       t.technicianId,
-//       u.userId,
-//       u.firstName,
-//       u.lastName,
-//       u.email,
-//       u.contactNumber,
-//       u.address,
-//       r.roleName
-//     FROM technicians t
-//     JOIN users u ON t.userId = u.userId
-//     JOIN roles r ON u.roleId = r.roleId
 
 async function getAllTechnicians() {
   await syncTechnicians();

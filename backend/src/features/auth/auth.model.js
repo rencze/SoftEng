@@ -4,11 +4,35 @@ const pool = require("../../config/db");
 // ✅ Find user by username
 async function findUserByUsername(username) {
   const [rows] = await pool.query(
-    "SELECT * FROM users WHERE username = ?",
+    `SELECT 
+        u.userId, 
+        u.username, 
+        u.email, 
+        u.password, 
+        u.roleId, 
+        u.firstName, 
+        u.lastName, 
+        u.contactNumber, 
+        u.address, 
+        u.isBlocked,
+        c.customerId
+     FROM users u
+     LEFT JOIN customers c ON c.userId = u.userId
+     WHERE u.username = ?`,
     [username]
   );
-  return rows[0]; // single user or undefined
+  return rows[0];
 }
+
+
+
+// async function findUserByUsername(username) {
+//   const [rows] = await pool.query(
+//     "SELECT * FROM users WHERE username = ?",
+//     [username]
+//   );
+//   return rows[0]; // single user or undefined
+// }
 
 // ✅ Find user by email
 async function findUserByEmail(email) {
@@ -40,6 +64,29 @@ async function createUser(user) {
   return result;
 }
 
+async function createTechnician(user) {
+  const { username, email, password, firstName, lastName, contactNumber, address } = user;
+
+  const [result] = await pool.query(
+    `INSERT INTO users
+      (username, email, password, roleId, firstName, lastName, contactNumber, address)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      username,
+      email,
+      password,
+      1, // Technician role
+      firstName,
+      lastName,
+      contactNumber,
+      address
+    ]
+  );
+
+  return result;
+}
+
+
 
 // ✅ Update password (forgot password / reset password)
 async function updatePasswordByEmail(email, newPassword) {
@@ -52,4 +99,4 @@ async function updatePasswordByEmail(email, newPassword) {
 
 
 
-module.exports = { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail };
+module.exports = { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail, createTechnician };

@@ -1,71 +1,150 @@
-🔹 Option 2: Technician via Management Page (Recommended)
+use soft_eng;
 
-👉 User first registers as a normal user (Customer) → then the Owner/Admin decides to promote them into a Technician using a management page.
-✅ Pros
-More control (only verified/approved users become technicians).
-Matches real workflow (usually owners approve technicians).
-Cleaner separation between user registration and role management.
-You can collect technician details (certs, documents, schedules) in one place.
-
-❌ Cons
-
-Slightly more work to set up (need a Technician Management page).
-
-Technicians can’t self-register immediately — they must wait for approval.
-👉 For your system:
-users ✅ keep (already there)
-technicians ✅ keep (technician added/removed)
-schedules ✅ keep (shift changes matter)
-bookings ✅ keep (audit trail of customer activity)
-
-roles ❌ skip (static data)
-    
-    CREATE TABLE technicians (
-    technicianId INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NOT NULL UNIQUE,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
+CREATE TABLE vehicle (
+  vehicleId INT AUTO_INCREMENT PRIMARY KEY,
+  plateNumber VARCHAR(20) NOT NULL,
+  brand VARCHAR(100) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  year INT NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 
-CREATE TABLE schedules (
-    scheduleId INT AUTO_INCREMENT PRIMARY KEY,
-    technicianId INT NOT NULL,
-    workDate DATE NOT NULL,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (technicianId) REFERENCES technicians(technicianId) ON DELETE CASCADE
+CREATE TABLE businessDay (
+    businessDayId INT AUTO_INCREMENT PRIMARY KEY,
+    dayOfWeek ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+    status ENUM('Open','Closed') DEFAULT 'Open'
 );
 
-CREATE TABLE timeSlots (
+CREATE TABLE timeSlot (
     timeSlotId INT AUTO_INCREMENT PRIMARY KEY,
-    scheduleId INT NOT NULL,
+    businessDayId INT NOT NULL,
     startTime TIME NOT NULL,
     endTime TIME NOT NULL,
-    isAvailable TINYINT(1) DEFAULT 1, -- 1 = free, 0 = booked
-    FOREIGN KEY (scheduleId) REFERENCES schedules(scheduleId) ON DELETE CASCADE
+    status ENUM('Open','Closed') DEFAULT 'Open',
+    FOREIGN KEY (businessDayId) REFERENCES businessDay(businessDayId) ON DELETE CASCADE
 );
 
-🔹 Example Workflow
+INSERT INTO businessDay (dayOfWeek, status) VALUES
+('Monday', 'Open'),
+('Tuesday', 'Open'),
+('Wednesday', 'Open'),
+('Thursday', 'Open'),
+('Friday', 'Open'),
+('Saturday', 'Open'),
+('Sunday', 'Closed');
 
-Technician sets availability for Sept 10, 2025:
-
-INSERT INTO schedules (technicianId, workDate) 
-VALUES (1, '2025-09-10');
-
-
-System (or Owner) generates slots for that day:
-
-INSERT INTO timeSlots (scheduleId, startTime, endTime)
-VALUES 
-  (1, '09:00:00', '10:00:00'),
-  (1, '10:00:00', '11:00:00'),
-  (1, '11:00:00', '12:00:00');
+CREATE TABLE customers (
+    customerId INT AUTO_INCREMENT PRIMARY KEY,
+    userId INT NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 
-Customer books 10–11am slot → mark as booked:
+----------------------NOT IMPLEMENTED-------------------------------------------
 
-UPDATE timeSlots 
-SET isAvailable = 0 
-WHERE timeSlotId = 2;
+CREATE TABLE registeredVehicle (
+  registeredVehicleId INT AUTO_INCREMENT PRIMARY KEY,
+  vehicleId INT NOT NULL UNIQUE,       -- one active row per vehicle
+  customerId INT NOT NULL,             -- current owner
+  registeredAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_rv_vehicle FOREIGN KEY (vehicleId) 
+      REFERENCES vehicle(vehicleId) ON DELETE CASCADE,
+  CONSTRAINT fk_rv_customer FOREIGN KEY (customerId) 
+      REFERENCES customers(customerId) ON DELETE CASCADE
+);
+
+CREATE TABLE vehicleOwnershipHistory (
+  historyId INT AUTO_INCREMENT PRIMARY KEY,
+  vehicleId INT NOT NULL,
+  customerId INT NOT NULL,
+  ownershipStart TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ownershipEnd TIMESTAMP NULL,  -- NULL = current owner
+  notes TEXT,
+
+  CONSTRAINT fk_voh_vehicle FOREIGN KEY (vehicleId)
+      REFERENCES vehicle(vehicleId) ON DELETE CASCADE,
+  CONSTRAINT fk_voh_customer FOREIGN KEY (customerId)
+      REFERENCES customers(customerId) ON DELETE CASCADE
+);
+
+---------------------------------------------------------
+- Slot Date table
+CREATE TABLE slotDate (
+    slotDateId INT AUTO_INCREMENT PRIMARY KEY,
+    slotDate DATE NOT NULL UNIQUE,
+    isOpen BOOLEAN DEFAULT TRUE,        -- TRUE=open, FALSE=closed
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Time Slot table
+CREATE TABLE timeSlot (
+    timeSlotId INT AUTO_INCREMENT PRIMARY KEY,
+    slotDateId INT NOT NULL,
+    startTime TIME NOT NULL,
+    endTime TIME NOT NULL,
+    isAvailable BOOLEAN DEFAULT TRUE,   -- TRUE=available, FALSE=booked/closed
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (slotDateId) REFERENCES slotDate(slotDateId) ON DELETE CASCADE
+);
+
+
+-- 1️⃣ Booking Status table
+CREATE TABLE bookingStatus (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  statusName VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO bookingStatus (statusName, description) VALUES
+('Pending', 'Awaiting admin approval'),
+('Confirmed', 'Booking confirmed and scheduled'),
+('Completed', 'Consultation finished'),
+('Rescheduled', 'Moved to another date/time'),
+('Cancelled', 'Booking cancelled'),
+('No-Show', 'Customer did not attend');
+
+-- 2️⃣ Booking table
+CREATE TABLE booking (
+  bookingId INT AUTO_INCREMENT PRIMARY KEY,
+  customerId INT NOT NULL,
+  technicianId INT DEFAULT NULL,
+  timeSlotId INT NOT NULL,
+  statusId INT DEFAULT 1, -- Pending
+  notes TEXT,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (customerId) REFERENCES customers(customerId) ON DELETE CASCADE,
+  FOREIGN KEY (technicianId) REFERENCES technicians(technicianId) ON DELETE SET NULL,
+  FOREIGN KEY (timeSlotId) REFERENCES timeSlot(timeSlotId) ON DELETE CASCADE,
+  FOREIGN KEY (statusId) REFERENCES bookingStatus(id),
+
+  INDEX idx_customer (customerId),
+  INDEX idx_technician (technicianId),
+  INDEX idx_status (statusId)
+);
+
+-- 3️⃣ Booking History table
+CREATE TABLE bookingHistory (
+  historyId INT AUTO_INCREMENT PRIMARY KEY,
+  bookingId INT NOT NULL,
+  statusId INT NOT NULL,
+  changedBy INT DEFAULT NULL,  -- refers to users.userId
+  remarks TEXT,
+  changedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (bookingId) REFERENCES booking(bookingId) ON DELETE CASCADE,
+  FOREIGN KEY (statusId) REFERENCES bookingStatus(id),
+  FOREIGN KEY (changedBy) REFERENCES users(userId) ON DELETE SET NULL,
+
+  INDEX idx_booking (bookingId),
+  INDEX idx_status (statusId),
+  INDEX idx_changedBy (changedBy)
+);
+

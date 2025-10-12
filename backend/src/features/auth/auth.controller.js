@@ -1,7 +1,8 @@
 // src/features/auth/auth.controller.js
 const jwt = require("jsonwebtoken");
+const pool = require("../../config/db"); // ✅ ADD THIS LINE
 const SECRET = process.env.JWT_SECRET || "supersecretkey";
-const { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail } = require("./auth.model");
+const { findUserByUsername, findUserByEmail, createUser, updatePasswordByEmail,  createTechnician } = require("./auth.model");
 
 
 // 1. REGISTER
@@ -32,31 +33,80 @@ async function register(req, res) {
   }
 }
 
-// 2. LOGIN
+// 1b. REGISTER TECHNICIAN (Admin-only)
+async function registerTechnician(req, res) {
+  try {
+    const { username, email, password, firstName, lastName, contactNumber, address } = req.body;
+
+    // Optional: check admin role from req.user.roleId if you have authentication middleware
+    // if (req.user.roleId !== 2) return res.status(403).json({ message: "Only admin can create technicians" });
+
+    if (await findUserByUsername(username))
+      return res.status(400).json({ error: "Username already exists" });
+
+    if (await findUserByEmail(email))
+      return res.status(400).json({ error: "Email already exists" });
+
+    const result = await createTechnician({
+      username,
+      email,
+      password,
+      firstName,
+      lastName,
+      contactNumber,
+      address
+    });
+
+    res.status(201).json({ message: "Technician registered successfully", userId: result.insertId });
+  } catch (err) {
+    console.error("Register technician error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function login(req, res) {
   try {
     const { username, password } = req.body;
     if (!username || !password)
       return res.status(400).json({ message: "Username and password required" });
 
-    // ✅ Actually fetch the user
     const user = await findUserByUsername(username);
+    if (!user) return res.status(401).json({ message: "Invalid username or password" });
 
-    if (!user) {
-      return res.status(401).json({ message: "Invalid username or password" });
-    }
-
-    // 🔴 Check if blocked
-    if (user.isBlocked && user.isBlocked === 1) {
+    if (user.isBlocked && user.isBlocked === 1)
       return res.status(403).json({ message: "Your account is blocked. Contact support." });
-    }
 
-    // ⚠️ Password check (no hashing in your setup)
-    if (user.password !== password) {
+    if (user.password !== password)
       return res.status(401).json({ message: "Invalid username or password" });
+
+    // ✅ Ensure a customer record exists for customers
+    if (user.roleId === 3) {
+      // Check if this user already has a customer record
+      const [rows] = await pool.query(
+        "SELECT customerId FROM customers WHERE userId = ?",
+        [user.userId]
+      );
+
+      if (rows.length > 0) {
+        user.customerId = rows[0].customerId; // existing customer record
+      } else {
+        // Create a new customer record using MySQL's built-in UUID()
+        await pool.query(
+          "INSERT INTO customers (customerId, userId) VALUES (UUID(), ?)",
+          [user.userId]
+        );
+
+        // Fetch the newly created customerId
+        const [newRow] = await pool.query(
+          "SELECT customerId FROM customers WHERE userId = ?",
+          [user.userId]
+        );
+
+        user.customerId = newRow[0].customerId;
+      }
     }
 
-    // ✅ Generate token
+    // ✅ Generate JWT token
     const token = jwt.sign(
       { userId: user.userId, roleId: user.roleId, username: user.username },
       SECRET,
@@ -67,25 +117,78 @@ async function login(req, res) {
       message: "Login successful",
       token,
       user: {
-    userId: user.userId,
-    username: user.username,
-    email: user.email,
-    roleId: user.roleId,
-    firstName: user.firstName,
-    lastName: user.lastName,
-  },
-      // user: {
-      //   userId: user.userId,
-      //   username: user.username,
-      //   email: user.email,
-      //   roleId: user.roleId,
-      // },
+        id: user.userId,
+        username: user.username,
+        email: user.email,
+        roleId: user.roleId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        customerId: user.customerId || null,
+      },
     });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
 }
+
+
+
+
+// 2. LOGIN
+// async function login(req, res) {
+//   try {
+//     const { username, password } = req.body;
+//     if (!username || !password)
+//       return res.status(400).json({ message: "Username and password required" });
+
+//     // ✅ Actually fetch the user
+//     const user = await findUserByUsername(username);
+
+//     if (!user) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+//     // 🔴 Check if blocked
+//     if (user.isBlocked && user.isBlocked === 1) {
+//       return res.status(403).json({ message: "Your account is blocked. Contact support." });
+//     }
+
+//     // ⚠️ Password check (no hashing in your setup)
+//     if (user.password !== password) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+//     // ✅ Generate token
+//     const token = jwt.sign(
+//       { userId: user.userId, roleId: user.roleId, username: user.username },
+//       SECRET,
+//       { expiresIn: "1h" }
+//     );
+
+//     res.json({
+//       message: "Login successful",
+//       token,
+//       user: {
+//     userId: user.userId,
+//     username: user.username,
+//     email: user.email,
+//     roleId: user.roleId,
+//     firstName: user.firstName,
+//     lastName: user.lastName,
+//   },
+//       // user: {
+//       //   userId: user.userId,
+//       //   username: user.username,
+//       //   email: user.email,
+//       //   roleId: user.roleId,
+//       // },
+//     });
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// }
 
 
 //  3. FORGOT PASSWORD (request)
@@ -123,5 +226,5 @@ async function resetPassword(req, res) {
 }
 
 
-module.exports = { register, login, forgotPassword, resetPassword, };
+module.exports = { register, login, forgotPassword, resetPassword, registerTechnician };
 

@@ -42,34 +42,3 @@ export default function Table({ columns, data, actions }) {
     </div>
   );
 }
-
-
-
-
-//DYANMIC SAMPLE 
-// import Table from "@/components/Table";
-
-// export default function UsersPage() {
-//   const [users, setUsers] = useState([]);
-
-//   useEffect(() => {
-//     setUsers([
-//       { id: 1, name: "John Doe", email: "john@example.com", role: "Customer", status: "Active" },
-//       { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Technician", status: "Blocked" },
-//     ]);
-//   }, []);
-
-//   const columns = ["name", "email", "contact number", "adress" "role", "status", "]; // dynamic column names
-//   const actions = [
-//     { label: "View", onClick: (row) => console.log("View", row) },
-//     { label: "Edit", onClick: (row) => console.log("Edit", row) },
-//     { label: "Delete", onClick: (row) => console.log("Delete", row.id) },
-//   ];
-
-//   return (
-//     <div>
-//       <h1 className="text-2xl font-bold mb-6">User Management</h1>
-//       <Table columns={columns} data={users} actions={actions} />
-//     </div>
-//   );
-// }

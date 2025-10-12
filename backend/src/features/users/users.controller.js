@@ -46,19 +46,6 @@ async function editUser(req, res) {
   }
 }
 
-
-
-// // Update
-// async function editUser(req, res) {
-//   try {
-//     const { id } = req.params;
-//     const result = await updateUser(id, req.body);
-//     res.json({ message: "User updated", result });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// }
-
 // Delete
 async function removeUser(req, res) {
   try {

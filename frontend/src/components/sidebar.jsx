@@ -98,8 +98,9 @@ export default function Sidebar({ isOpen }) {
           icon: <FaUsers />,
           color: "green",
           subLinks: [
-            { name: "Technicians", path: "/dashboard/owner/technicians" },
             { name: "Users", path: "/dashboard/owner/users" },
+            { name: "Technicians", path: "/dashboard/owner/users/technicians" },
+            { name: "Customer", path: "/dashboard/owner/users/customers" },
           ],
         },
 
@@ -120,6 +121,7 @@ export default function Sidebar({ isOpen }) {
             subLinks: [
               { name: "Vehicles", path: "/dashboard/owner/vehicles" },
               { name: "Register Vehicle", path: "/dashboard/owner/vehicles/register" },
+              { name: "Vehicle History", path: "/dashboard/owner/vehicles/register/registeredHistory" },
             ],
           },
  
@@ -131,7 +133,7 @@ export default function Sidebar({ isOpen }) {
           subLinks: [
             { name: "Bookings", path: "/dashboard/owner/bookings" },
             { name: "Quotations", path: "/dashboard/owner/quotations" },
-            { name: "Contracts", path: "/dashboard/owner/contracts" },
+            { name: "Service Job", path: "/dashboard/owner/service-job" },
             { name: "Schedules", path: "/dashboard/owner/technician-schedules" }, // ✅ added schedule
           ],
         },
@@ -152,7 +154,8 @@ export default function Sidebar({ isOpen }) {
           icon: <FaFileInvoiceDollar />,
           color: "orange",
           subLinks: [
-            { name: "Payments / Billing", path: "/dashboard/owner/payments" },
+            { name: "Payments", path: "/dashboard/owner/payments" },
+            { name: "Payment History", path: "/dashboard/owner/payments/payment-history" },
           ],
         },
 
@@ -162,7 +165,7 @@ export default function Sidebar({ isOpen }) {
           color: "teal",
           subLinks: [
             { name: "Parts", path: "/dashboard/owner/inventory" },
-            { name: "Stock In/Out", path: "/dashboard/owner/stock" },
+            { name: "Stock Transaction History", path: "/dashboard/owner/inventory/invetoryTracking" },
           ],
         },
       ];

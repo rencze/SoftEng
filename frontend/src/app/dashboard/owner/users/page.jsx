@@ -351,7 +351,7 @@
                 {selected.length} user{selected.length > 1 ? 's' : ''} selected
               </span>
               <div className="flex space-x-3">
-             {false && (   
+             
                 <button
                   onClick={() => handleDelete(selected)}
                   className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -359,7 +359,7 @@
                   <FaTrash className="mr-2" />
                   Delete Selected
                 </button>
-             )}   
+          
                 <button
                   onClick={() => setSelected([])}
                   className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
@@ -509,7 +509,7 @@
                         >
                           {user.isBlocked ? <FaUnlock /> : <FaLock />}
                         </button>
-             {false && (           
+                 
                         <button 
                           onClick={() => handleDelete([user.userId])}
                           className="text-red-600 hover:text-red-800 transition-colors p-1" 
@@ -517,7 +517,7 @@
                         >
                           <FaTrash />
                         </button>
-                        )}
+                       
                       </div>
                     </td>
                   </tr>

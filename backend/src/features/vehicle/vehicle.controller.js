@@ -32,11 +32,21 @@ async function getVehicleById(req, res) {
 async function createVehicle(req, res) {
   try {
     const result = await createVehicleModel(req.body);
-    res.status(201).json({ message: "Vehicle created", vehicle: result });
+    res.status(201).json(result); // return only the created vehicle
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 }
+
+
+// async function createVehicle(req, res) {
+//   try {
+//     const result = await createVehicleModel(req.body);
+//     res.status(201).json({ message: "Vehicle created", vehicle: result });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// }
 
 // Update
 async function updateVehicle(req, res) {
