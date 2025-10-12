@@ -36,33 +36,29 @@ export default function Booking() {
   }, [loading, user, router]);
 
   // Fetch technicians
-useEffect(() => {
-  const fetchTechnicians = async () => {
-    setLoadingTechs(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
+  useEffect(() => {
+    const fetchTechnicians = async () => {
+      setLoadingTechs(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
 
-      console.log("🔹 Fetching technicians...");
-      const response = await fetch("http://localhost:3001/api/technicians", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await fetch("http://localhost:3001/api/technicians", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      console.log("🔹 Response status:", response.status);
-      const data = await response.json();
-      console.log("🔹 Technicians data:", data);
-
-      setTechnicians(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("❌ Technician fetch error:", err);
-      setTechnicians([]);
-    } finally {
-      setLoadingTechs(false);
-    }
-  };
-  fetchTechnicians();
-}, []);
-
+        if (!response.ok) throw new Error("Failed to fetch technicians");
+        const data = await response.json();
+        setTechnicians(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setTechnicians([]);
+      } finally {
+        setLoadingTechs(false);
+      }
+    };
+    fetchTechnicians();
+  }, []);
 
   // Calendar logic
   const getDaysInMonth = () => {

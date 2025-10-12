@@ -1,7 +1,6 @@
-
 const BookingModel = require("./booking.model");
-const pool = require("../../config/db");
-// Get all bookings
+
+// 🟩 Get all bookings
 async function getAllBookings(req, res) {
   try {
     const bookings = await BookingModel.getAllBookingsModel();
@@ -11,7 +10,7 @@ async function getAllBookings(req, res) {
   }
 }
 
-// Get single booking
+// 🟦 Get booking by ID
 async function getBookingById(req, res) {
   try {
     const { id } = req.params;
@@ -23,8 +22,7 @@ async function getBookingById(req, res) {
   }
 }
 
-
-// Create new booking
+// 🟢 Create booking
 async function createBooking(req, res) {
   try {
     const booking = await BookingModel.createBookingModel(req.body);
@@ -34,7 +32,7 @@ async function createBooking(req, res) {
   }
 }
 
-// Update booking info
+// 🟨 Update booking info
 async function updateBooking(req, res) {
   try {
     const { id } = req.params;
@@ -47,7 +45,7 @@ async function updateBooking(req, res) {
   }
 }
 
-// Delete booking
+// 🟥 Delete booking
 async function deleteBooking(req, res) {
   try {
     const { id } = req.params;
@@ -60,7 +58,7 @@ async function deleteBooking(req, res) {
   }
 }
 
-// Update booking status
+// 🟧 Update booking status
 async function updateBookingStatus(req, res) {
   try {
     const { id } = req.params;
@@ -72,7 +70,7 @@ async function updateBookingStatus(req, res) {
   }
 }
 
-// Get booking history
+// 🟪 Get booking history
 async function getBookingHistory(req, res) {
   try {
     const { id } = req.params;
@@ -83,22 +81,15 @@ async function getBookingHistory(req, res) {
   }
 }
 
-// GET /api/bookings/booked-technicians/:timeSlotId?date=YYYY-MM-DD
+// 🟠 Fetch booked technicians per slot & date
 async function fetchBookedTechnicians(req, res) {
   try {
     const { timeSlotId } = req.params;
-    const { date } = req.query; // fetch date from query
+    const { date } = req.query;
 
     if (!timeSlotId || !date) return res.json([]);
 
-    const [rows] = await pool.query(
-      `SELECT technicianId
-       FROM booking
-       WHERE timeSlotId = ? AND DATE(createdAt) = ?`,
-      [timeSlotId, date]
-    );
-
-    const bookedTechIds = rows.map(r => r.technicianId);
+    const bookedTechIds = await BookingModel.getBookedTechniciansBySlotAndDate(timeSlotId, date);
     res.json(bookedTechIds);
   } catch (err) {
     console.error(err);
@@ -106,25 +97,11 @@ async function fetchBookedTechnicians(req, res) {
   }
 }
 
-
-
-// // GET /api/bookings/booked-technicians/:timeSlotId
-// async function fetchBookedTechnicians(req, res) {
-//   try {
-//     const { timeSlotId } = req.params;
-//     const bookedTechIds = await BookingModel.getBookedTechniciansBySlot(timeSlotId);
-//     res.json(bookedTechIds);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// }
-
-// GET /api/slot-dates/slots-with-booked/:date
+// 🟣 Fetch all slots with booked technicians for a date
 async function getSlotsWithBookedTechnicians(req, res) {
   try {
     const { date } = req.params;
-    const slots = await SlotModel.getSlotsWithBookedTechniciansByDateModel(date);
+    const slots = await BookingModel.getSlotsWithBookedTechniciansByDateModel(date);
     res.json(slots);
   } catch (err) {
     console.error(err);
@@ -132,6 +109,21 @@ async function getSlotsWithBookedTechnicians(req, res) {
   }
 }
 
+// 🟢 Get technicians availability (for given date + timeSlot)
+async function getTechnicianAvailability(req, res) {
+  try {
+    const { date, timeSlotId } = req.query;
+
+    if (!date || !timeSlotId)
+      return res.status(400).json({ message: "Missing date or timeSlotId" });
+
+    const technicians = await BookingModel.getTechnicianAvailabilityBySlotModel(date, timeSlotId);
+    res.json(technicians);
+  } catch (err) {
+    console.error("Error fetching technician availability:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
 
 module.exports = {
   getAllBookings,
@@ -143,4 +135,5 @@ module.exports = {
   getBookingHistory,
   fetchBookedTechnicians,
   getSlotsWithBookedTechnicians,
+  getTechnicianAvailability,
 };

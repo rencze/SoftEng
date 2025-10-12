@@ -153,6 +153,19 @@ async function getSlotsByDate(req, res) {
   }
 }
 
+// --- Get all technicians and availability for a specific time slot ---
+async function getTechniciansByTimeSlot(req, res) {
+  try {
+    const { timeSlotId } = req.params;
+    const technicians = await SlotModel.getTechniciansWithAvailabilityBySlot(timeSlotId);
+
+    res.json(technicians);
+  } catch (err) {
+    console.error("Error fetching technician availability:", err);
+    res.status(500).json({ error: "Failed to fetch technician availability" });
+  }
+}
+
 module.exports = {
   getAllSlotDates,
   getSlotDateById,
@@ -169,5 +182,6 @@ module.exports = {
   updateTimeSlot,
   updateTimeSlotAvailability,
   deleteTimeSlot,
+  getTechniciansByTimeSlot
 };
 

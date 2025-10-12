@@ -1,8 +1,6 @@
-
-
 const pool = require("../../config/db");
 
-// --- Get all bookings with customer & technician names ---
+// 🟩 Get all bookings with joined info
 async function getAllBookingsModel() {
   const [rows] = await pool.query(`
     SELECT 
@@ -24,12 +22,11 @@ async function getAllBookingsModel() {
   return rows;
 }
 
-// Get booking by ID
+// 🟦 Get booking by ID
 async function getBookingByIdModel(bookingId) {
-  const [rows] = await pool.query(
-    `
+  const [rows] = await pool.query(`
     SELECT 
-      b.*,
+      b.*, 
       bs.statusName,
       CONCAT(cu.firstName, ' ', cu.lastName) AS customerName,
       CONCAT(tu.firstName, ' ', tu.lastName) AS technicianName,
@@ -43,37 +40,35 @@ async function getBookingByIdModel(bookingId) {
     LEFT JOIN users tu ON t.userId = tu.userId
     LEFT JOIN timeSlot ts ON b.timeSlotId = ts.timeSlotId
     WHERE b.bookingId = ?
-    `,
-    [bookingId]
-  );
+  `, [bookingId]);
   return rows[0];
 }
 
+// 🟩 Create booking
 async function createBookingModel({ customerId, technicianId, timeSlotId, notes }) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 1️⃣ Lock the row for this technician + slot
+    // Ensure tech not double-booked
     const [existing] = await conn.query(
       `SELECT * FROM booking WHERE technicianId = ? AND timeSlotId = ? FOR UPDATE`,
       [technicianId, timeSlotId]
     );
 
-    if (existing.length > 0) {
+    if (existing.length > 0)
       throw new Error("Technician is already booked at this time");
-    }
 
-    // 2️⃣ Insert booking
+    // Create booking
     const [result] = await conn.query(
       `INSERT INTO booking (customerId, technicianId, timeSlotId, notes, statusId)
        VALUES (?, ?, ?, ?, ?)`,
-      [customerId, technicianId, timeSlotId, notes || null, 1] // statusId 1 = Pending
+      [customerId, technicianId, timeSlotId, notes || null, 1]
     );
 
     const bookingId = result.insertId;
 
-    // 3️⃣ Add booking history
+    // Log history
     await conn.query(
       `INSERT INTO bookingHistory (bookingId, statusId, remarks)
        VALUES (?, ?, ?)`,
@@ -81,80 +76,16 @@ async function createBookingModel({ customerId, technicianId, timeSlotId, notes 
     );
 
     await conn.commit();
-
-    return {
-      bookingId,
-      customerId,
-      technicianId,
-      timeSlotId,
-      notes,
-      statusId: 1,
-    };
+    return { bookingId, customerId, technicianId, timeSlotId, notes, statusId: 1 };
   } catch (err) {
     await conn.rollback();
-
-    if (err.code === "ER_DUP_ENTRY") {
-      throw new Error("This technician is already booked for this time slot");
-    }
-
     throw err;
   } finally {
     conn.release();
   }
 }
 
-
-// ✅ Create booking with time slot lock and constraint handling
-// 11 PM
-// async function createBookingModel({ customerId, technicianId, timeSlotId, notes }) {
-//   const conn = await pool.getConnection();
-//   try {
-//     await conn.beginTransaction();
-
-//     //  Lock the time slot row so others wait until this transaction finishes
-//     const [slotRows] = await conn.query(
-//       "SELECT isAvailable FROM timeSlot WHERE timeSlotId = ? FOR UPDATE",
-//       [timeSlotId]
-//     );
-
-//     if (!slotRows.length) throw new Error("Time slot not found");
-//     if (!slotRows[0].isAvailable) throw new Error("Time slot is already booked");
-
-//     //  Insert booking
-//     const [result] = await conn.query(
-//       `INSERT INTO booking (customerId, technicianId, timeSlotId, notes, statusId)
-//        VALUES (?, ?, ?, ?, ?)`,
-//       [customerId, technicianId || null, timeSlotId, notes || null, 1]
-//     );
-//     const bookingId = result.insertId;
-
-//     //  Mark slot unavailable AFTER insert succeeds
-//     await conn.query("UPDATE timeSlot SET isAvailable = 0 WHERE timeSlotId = ?", [timeSlotId]);
-
-//     //  Add booking history
-//     await conn.query(
-//       `INSERT INTO bookingHistory (bookingId, statusId, remarks)
-//        VALUES (?, ?, ?)`,
-//       [bookingId, 1, "Booking created (Pending)"]
-//     );
-
-//     await conn.commit();
-//     return { bookingId, customerId, technicianId, timeSlotId, notes, statusId: 1 };
-//   } catch (err) {
-//     await conn.rollback();
-
-//     //  Handle MySQL duplicate entry error from unique constraint
-//     if (err.code === "ER_DUP_ENTRY") {
-//       throw new Error("This time slot is already booked. Please choose another.");
-//     }
-
-//     throw err;
-//   } finally {
-//     conn.release();
-//   }
-// }
-
-// Update booking
+// 🟨 Update booking info
 async function updateBookingModel(bookingId, { technicianId, timeSlotId, notes }) {
   const [result] = await pool.query(
     `UPDATE booking SET technicianId = ?, timeSlotId = ?, notes = ? WHERE bookingId = ?`,
@@ -163,13 +94,13 @@ async function updateBookingModel(bookingId, { technicianId, timeSlotId, notes }
   return result;
 }
 
-// Delete booking
+// 🟥 Delete booking
 async function deleteBookingModel(bookingId) {
   const [result] = await pool.query(`DELETE FROM booking WHERE bookingId = ?`, [bookingId]);
   return result;
 }
 
-// Update booking status + history
+// 🟧 Update booking status
 async function updateBookingStatusModel(bookingId, statusId, changedBy, remarks) {
   const conn = await pool.getConnection();
   try {
@@ -196,35 +127,32 @@ async function updateBookingStatusModel(bookingId, statusId, changedBy, remarks)
   }
 }
 
-// Get booking history
+// 🟦 Booking history
 async function getBookingHistoryModel(bookingId) {
-  const [rows] = await pool.query(
-    `
+  const [rows] = await pool.query(`
     SELECT 
-      bh.*,
-      bs.statusName,
+      bh.*, bs.statusName,
       CONCAT(u.firstName, ' ', u.lastName) AS changedByName
     FROM bookingHistory bh
     LEFT JOIN bookingStatus bs ON bh.statusId = bs.id
     LEFT JOIN users u ON bh.changedBy = u.userId
     WHERE bh.bookingId = ?
     ORDER BY bh.changedAt DESC
-    `,
-    [bookingId]
-  );
+  `, [bookingId]);
   return rows;
 }
 
-// Get booked technicians for a specific time slot and date
-async function getBookedTechniciansBySlot(timeSlotId) {
-  const [rows] = await pool.query(
-    `SELECT technicianId FROM booking WHERE timeSlotId = ?`,
-    [timeSlotId]
-  );
+// 🟢 Get booked technicians per slot & date
+async function getBookedTechniciansBySlotAndDate(timeSlotId, date) {
+  const [rows] = await pool.query(`
+    SELECT technicianId
+    FROM booking
+    WHERE timeSlotId = ? AND DATE(createdAt) = ?
+  `, [timeSlotId, date]);
   return rows.map(r => r.technicianId);
 }
 
-// Get slots for a date along with booked technicians
+// 🟣 Get all slots + booked techs for a date
 async function getSlotsWithBookedTechniciansByDateModel(date) {
   const [slotDateRows] = await pool.query(
     "SELECT * FROM slotDate WHERE slotDate = ?",
@@ -233,14 +161,11 @@ async function getSlotsWithBookedTechniciansByDateModel(date) {
   const slotDate = slotDateRows[0];
   if (!slotDate) return [];
 
-  // Fetch all timeSlots for that slotDate
-  const [slots] = await pool.query(
-    `
+  const [slots] = await pool.query(`
     SELECT 
       ts.timeSlotId,
       ts.startTime,
       ts.endTime,
-      ts.isAvailable,
       GROUP_CONCAT(b.technicianId) AS bookedTechnicians
     FROM timeSlot ts
     LEFT JOIN booking b
@@ -249,11 +174,8 @@ async function getSlotsWithBookedTechniciansByDateModel(date) {
     WHERE ts.slotDateId = ?
     GROUP BY ts.timeSlotId
     ORDER BY ts.startTime ASC
-    `,
-    [date, slotDate.slotDateId]
-  );
+  `, [date, slotDate.slotDateId]);
 
-  // Convert bookedTechnicians from CSV string to array
   slots.forEach(slot => {
     slot.bookedTechnicians = slot.bookedTechnicians
       ? slot.bookedTechnicians.split(",").map(Number)
@@ -263,6 +185,26 @@ async function getSlotsWithBookedTechniciansByDateModel(date) {
   return slots;
 }
 
+// 🟢 Get all technicians and mark if available for a specific date & slot
+async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
+  const [rows] = await pool.query(`
+    SELECT 
+      t.technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
+      CASE 
+        WHEN b.bookingId IS NOT NULL THEN FALSE
+        ELSE TRUE
+      END AS isAvailable
+    FROM technicians t
+    JOIN users u ON t.userId = u.userId
+    LEFT JOIN booking b
+      ON b.technicianId = t.technicianId
+      AND b.timeSlotId = ?
+      AND DATE(b.createdAt) = ?
+  `, [timeSlotId, date]);
+
+  return rows;
+}
 
 
 module.exports = {
@@ -273,8 +215,7 @@ module.exports = {
   deleteBookingModel,
   updateBookingStatusModel,
   getBookingHistoryModel,
-  getBookedTechniciansBySlot,
+  getBookedTechniciansBySlotAndDate,
   getSlotsWithBookedTechniciansByDateModel,
+   getTechnicianAvailabilityBySlotModel,
 };
-
-

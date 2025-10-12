@@ -122,6 +122,32 @@
     return result;
   }
 
+  // ✅ Return all technicians for a given time slot, showing who’s booked
+async function getTechniciansWithAvailabilityBySlot(timeSlotId) {
+  const [rows] = await pool.query(`
+    SELECT 
+      t.technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
+      COALESCE(ta.isAvailable, TRUE) AS isAvailable,
+      CASE 
+        WHEN b.technicianId IS NOT NULL THEN FALSE 
+        ELSE TRUE 
+      END AS canBook
+    FROM technicians t
+    INNER JOIN users u ON t.userId = u.userId
+    LEFT JOIN technicianAvailability ta 
+      ON t.technicianId = ta.technicianId
+      AND ta.timeSlotId = ?
+    LEFT JOIN booking b 
+      ON b.technicianId = t.technicianId 
+      AND b.timeSlotId = ?
+    ORDER BY u.firstName
+  `, [timeSlotId, timeSlotId]);
+
+  return rows;
+}
+
+
   module.exports = {
     updateSlotDateAndCascade,
     getAllSlotDatesModel,
@@ -136,4 +162,5 @@
     updateTimeSlotModel,
     updateTimeSlotAvailabilityModel,
     deleteTimeSlotModel,
+    getTechniciansWithAvailabilityBySlot,
   };
