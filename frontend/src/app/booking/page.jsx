@@ -22,7 +22,7 @@ export default function Booking() {
   const [technicians, setTechnicians] = useState([]);
   const [loadingTechs, setLoadingTechs] = useState(false);
 
-  const [bookedTechIds, setBookedTechIds] = useState([]); // 🟡 Track booked technicians for selected slot
+  const [bookedTechIds, setBookedTechIds] = useState([]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -34,31 +34,6 @@ export default function Booking() {
       }
     }
   }, [loading, user, router]);
-
-  // Fetch technicians
-  useEffect(() => {
-    const fetchTechnicians = async () => {
-      setLoadingTechs(true);
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-
-        const response = await fetch("http://localhost:3001/api/technicians", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch technicians");
-        const data = await response.json();
-        setTechnicians(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error(err);
-        setTechnicians([]);
-      } finally {
-        setLoadingTechs(false);
-      }
-    };
-    fetchTechnicians();
-  }, []);
 
   // Calendar logic
   const getDaysInMonth = () => {
@@ -98,7 +73,8 @@ export default function Booking() {
 
       setSlots({ AM, PM });
       setSelectedHour({ id: null, label: null });
-      setBookedTechIds([]); // clear booked technicians
+      setSelectedTechnician(null);
+      setBookedTechIds([]);
     } catch (err) {
       console.error(err);
       setSlots({ AM: [], PM: [] });
@@ -114,31 +90,82 @@ export default function Booking() {
       const token = localStorage.getItem("token");
       const formattedDate = moment(selectedDate).format("YYYY-MM-DD");
       const res = await fetch(
-        `http://localhost:3001/api/bookings/booked-technicians?date=${formattedDate}&timeSlotId=${slotId}`,
+        `http://localhost:3001/api/bookings/booked-technicians/${slotId}?date=${formattedDate}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error("Failed to fetch booked technicians");
       const data = await res.json();
-      return data; // array of technicianIds
+      return Array.isArray(data) ? data : [];
     } catch (err) {
       console.error(err);
       return [];
     }
   };
 
+  // Fetch technicians when date and slot are selected
+  const fetchTechnicians = async () => {
+    if (!selectedDate || !selectedHour?.id) return;
+    
+    setLoadingTechs(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+
+      const formattedDate = moment(selectedDate).format("YYYY-MM-DD");
+      
+      const response = await fetch(
+        `http://localhost:3001/api/bookings/availability?date=${formattedDate}&timeSlotId=${selectedHour.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch technicians");
+      const data = await response.json();
+      setTechnicians(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+      setTechnicians([]);
+    } finally {
+      setLoadingTechs(false);
+    }
+  };
+
+  // Fetch technicians when slot is selected
+  useEffect(() => {
+    if (selectedDate && selectedHour?.id) {
+      fetchTechnicians();
+    } else {
+      setTechnicians([]);
+    }
+  }, [selectedDate, selectedHour]);
+
   // Update booked technicians whenever a slot is selected
   useEffect(() => {
-    if (!selectedHour?.id) return;
+    if (!selectedHour?.id || !selectedDate) {
+      setBookedTechIds([]);
+      setSelectedTechnician(null);
+      return;
+    }
+    
     const updateBookedTechs = async () => {
       const bookedIds = await fetchBookedTechnicians(selectedHour.id);
       setBookedTechIds(bookedIds);
-      // Reset selected technician if now unavailable
+      
+      // Clear selected technician if it's now booked
       if (selectedTechnician && bookedIds.includes(selectedTechnician.id)) {
         setSelectedTechnician(null);
       }
     };
     updateBookedTechs();
   }, [selectedHour, selectedDate]);
+
+  // Clear selections when period changes
+  useEffect(() => {
+    setSelectedHour({ id: null, label: null });
+    setSelectedTechnician(null);
+    setBookedTechIds([]);
+  }, [period]);
 
   const formatTime12h = (time) => {
     const [hour, minute] = time.split(":").map(Number);
@@ -153,6 +180,83 @@ export default function Booking() {
     const now = moment();
     const slotTime = moment(`${moment(date).format("YYYY-MM-DD")} ${time}`, "YYYY-MM-DD HH:mm:ss");
     return slotTime.isBefore(now);
+  };
+
+  const handleSlotSelection = async (slot) => {
+    const fullTime = `${formatTime12h(slot.startTime)} - ${formatTime12h(slot.endTime)}`;
+    const pastSlot = isPastSlot(selectedDate, slot.startTime);
+    
+    if (pastSlot) return;
+    
+    setSelectedHour({ id: slot.timeSlotId, label: fullTime });
+  };
+
+  const handleTechnicianSelection = (tech) => {
+    const isBooked = !tech.isAvailable;
+    
+    // Only allow selection if technician is available
+    if (!isBooked) {
+      setSelectedTechnician({ 
+        id: tech.technicianId, 
+        name: tech.technicianName 
+      });
+    }
+  };
+
+  const handleBooking = async () => {
+    if (!selectedDate || !selectedHour?.id || !selectedTechnician?.id) {
+      alert("Please select a date, time, and technician.");
+      return;
+    }
+
+    if (!user?.customerId) {
+      alert("Customer ID not found. Please login again.");
+      return;
+    }
+
+    // Double-check if technician is still available
+    const isCurrentlyBooked = bookedTechIds.includes(selectedTechnician.id);
+    if (isCurrentlyBooked) {
+      alert("This technician is no longer available for the selected time slot. Please choose another technician.");
+      setSelectedTechnician(null);
+      return;
+    }
+
+    const payload = {
+      customerId: user.customerId,
+      technicianId: selectedTechnician.id,
+      timeSlotId: selectedHour.id,
+      notes: "",
+    };
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:3001/api/bookings", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Booking successful!");
+        // Refresh the booked technicians list
+        const updatedBookedIds = await fetchBookedTechnicians(selectedHour.id);
+        setBookedTechIds(updatedBookedIds);
+        
+        // Clear selections
+        setSelectedHour({ id: null, label: null });
+        setSelectedTechnician(null);
+      } else {
+        alert(data.message || "Booking failed. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Booking failed due to server error.");
+    }
   };
 
   const days = getDaysInMonth();
@@ -177,9 +281,19 @@ export default function Booking() {
           {/* Calendar */}
           <div className="w-1/3">
             <div className="flex items-center justify-between mb-6">
-              <button onClick={() => navigate("PREV")} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors">&lt;</button>
+              <button 
+                onClick={() => navigate("PREV")} 
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
+              >
+                &lt;
+              </button>
               <span className="text-lg font-semibold text-gray-800">{monthYear}</span>
-              <button onClick={() => navigate("NEXT")} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors">&gt;</button>
+              <button 
+                onClick={() => navigate("NEXT")} 
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
+              >
+                &gt;
+              </button>
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-3">
@@ -228,8 +342,22 @@ export default function Booking() {
             </div>
 
             <div className="flex justify-center gap-4 mb-4">
-              <button onClick={() => setPeriod("AM")} className={`px-4 py-2 rounded-lg font-medium ${period === "AM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>AM</button>
-              <button onClick={() => setPeriod("PM")} className={`px-4 py-2 rounded-lg font-medium ${period === "PM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>PM</button>
+              <button 
+                onClick={() => setPeriod("AM")} 
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  period === "AM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                AM
+              </button>
+              <button 
+                onClick={() => setPeriod("PM")} 
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  period === "PM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                PM
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2">
@@ -245,10 +373,7 @@ export default function Booking() {
                   return (
                     <button
                       key={idx}
-                      onClick={async () => {
-                        if (pastSlot) return;
-                        setSelectedHour({ id: slot.timeSlotId, label: fullTime });
-                      }}
+                      onClick={() => handleSlotSelection(slot)}
                       disabled={pastSlot}
                       className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
                         pastSlot
@@ -270,6 +395,11 @@ export default function Booking() {
           <div className="w-1/3 flex flex-col justify-between">
             <div className="mb-2">
               <h3 className="text-gray-700 font-medium text-sm">Select Technician</h3>
+              {selectedHour?.id && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Available technicians for {selectedHour.label}
+                </p>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2 mb-4">
@@ -279,22 +409,24 @@ export default function Booking() {
                 <p className="text-gray-500 text-center">No technicians available.</p>
               ) : (
                 technicians.map((tech) => {
-                  const isBooked = bookedTechIds.includes(tech.technicianId);
+                  const isBooked = !tech.isAvailable;
+                  const isSelected = selectedTechnician?.id === tech.technicianId;
 
                   return (
                     <button
                       key={tech.technicianId}
-                      onClick={() => !isBooked && setSelectedTechnician({ id: tech.technicianId, name: `${tech.firstName} ${tech.lastName}` })}
+                      onClick={() => handleTechnicianSelection(tech)}
                       disabled={isBooked}
                       className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
                         isBooked
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : selectedTechnician?.id === tech.technicianId
+                          ? "bg-red-100 text-red-700 cursor-not-allowed border border-red-200"
+                          : isSelected
                           ? "bg-indigo-600 text-white shadow"
                           : "bg-gray-50 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
                       }`}
                     >
-                      {tech.firstName} {tech.lastName}
+                      {tech.technicianName} 
+                      {isBooked && " (Booked)"}
                     </button>
                   );
                 })
@@ -302,48 +434,8 @@ export default function Booking() {
             </div>
 
             <button
-              onClick={async () => {
-                if (!selectedDate || !selectedHour?.id || !selectedTechnician?.id) {
-                  alert("Please select a date, time, and technician.");
-                  return;
-                }
-
-                if (!user?.customerId) {
-                  alert("Customer ID not found. Please login again.");
-                  return;
-                }
-
-                const payload = {
-                  customerId: user.customerId,
-                  technicianId: selectedTechnician.id,
-                  timeSlotId: selectedHour.id,
-                  notes: "",
-                };
-
-                try {
-                  const token = localStorage.getItem("token");
-                  const res = await fetch("http://localhost:3001/api/bookings", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify(payload),
-                  });
-
-                  const data = await res.json();
-                  if (res.ok) {
-                    alert("Booking successful!");
-                    setSelectedDate(null);
-                    setSelectedHour({ id: null, label: null });
-                    setSelectedTechnician({ id: null, name: null });
-                    setSlots({ AM: [], PM: [] });
-                    setBookedTechIds([]);
-                  } else {
-                    alert(data.message || "Booking failed. Check console for details.");
-                  }
-                } catch (err) {
-                  console.error(err);
-                  alert("Booking failed due to server error.");
-                }
-              }}
+              onClick={handleBooking}
+              disabled={!selectedDate || !selectedHour?.id || !selectedTechnician?.id}
               className={`mt-2 py-3 rounded-lg font-medium text-sm transition ${
                 !selectedDate || !selectedHour?.id || !selectedTechnician?.id
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -353,6 +445,23 @@ export default function Booking() {
               Book Now
             </button>
 
+            {/* Booking Summary */}
+            {(selectedDate || selectedHour?.id || selectedTechnician?.id) && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-700 mb-2">Booking Summary</h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  {selectedDate && (
+                    <p>Date: {moment(selectedDate).format("MMMM D, YYYY")}</p>
+                  )}
+                  {selectedHour?.label && (
+                    <p>Time: {selectedHour.label}</p>
+                  )}
+                  {selectedTechnician?.name && (
+                    <p>Technician: {selectedTechnician.name}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

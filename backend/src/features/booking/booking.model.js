@@ -185,6 +185,7 @@ async function getSlotsWithBookedTechniciansByDateModel(date) {
   return slots;
 }
 
+
 // 🟢 Get all technicians and mark if available for a specific date & slot
 async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
   const [rows] = await pool.query(`
@@ -205,6 +206,27 @@ async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
 
   return rows;
 }
+
+// 🟢 Get all technicians and mark if available for a specific date & slot
+// async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
+//   const [rows] = await pool.query(`
+//     SELECT 
+//       t.technicianId,
+//       CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
+//       CASE 
+//         WHEN b.bookingId IS NOT NULL THEN FALSE
+//         ELSE TRUE
+//       END AS isAvailable
+//     FROM technicians t
+//     JOIN users u ON t.userId = u.userId
+//     LEFT JOIN booking b
+//       ON b.technicianId = t.technicianId
+//       AND b.timeSlotId = ?
+//       AND DATE(b.createdAt) = ?
+//   `, [timeSlotId, date]);
+
+//   return rows;
+// }
 
 
 module.exports = {

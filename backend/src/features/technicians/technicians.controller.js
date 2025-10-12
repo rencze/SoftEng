@@ -1,4 +1,4 @@
-const { getAllTechnicians, addTechnician, removeTechnician } = require("./technicians.model");
+const { getAllTechnicians, addTechnician, removeTechnician, getTechniciansWithAvailability } = require("./technicians.model");
 
 // Fetch all technicians
 async function fetchTechnicians(_req, res) {
@@ -40,4 +40,19 @@ async function removeTechnicianController(req, res) {
   }
 }
 
-module.exports = { fetchTechnicians, addTechnicianController, removeTechnicianController };
+// Fetch all technicians with availability for a specific slot
+async function fetchTechniciansForSlot(req, res) {
+  try {
+    const { date, timeSlotId } = req.query;
+    if (!date || !timeSlotId)
+      return res.status(400).json({ message: "date and timeSlotId are required" });
+
+    const technicians = await getTechniciansWithAvailability(date, timeSlotId);
+    res.json(technicians);
+  } catch (err) {
+    console.error("Fetch technicians for slot error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+module.exports = { fetchTechnicians, addTechnicianController, removeTechnicianController, fetchTechniciansForSlot };

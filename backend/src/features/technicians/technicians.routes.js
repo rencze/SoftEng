@@ -4,8 +4,12 @@
   const { 
     fetchTechnicians, 
     addTechnicianController, 
-    removeTechnicianController 
+    removeTechnicianController,
+    fetchTechniciansForSlot 
   } = require("./technicians.controller");
+
+  // Fetch technicians for a specific slot
+  router.get("/for-slot", authenticateToken, fetchTechniciansForSlot);
 
   // Get all technicians
   router.get("/", authenticateToken, fetchTechnicians);

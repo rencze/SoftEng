@@ -130,6 +130,19 @@ CREATE TABLE booking (
   INDEX idx_status (statusId)
 );
 
+CREATE TABLE technicianAvailability (
+    technicianAvailabilityId INT AUTO_INCREMENT PRIMARY KEY,
+    technicianId INT NOT NULL,
+    timeSlotId INT NOT NULL,
+    isAvailable BOOLEAN DEFAULT TRUE,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (technicianId) REFERENCES technicians(technicianId) ON DELETE CASCADE,
+    FOREIGN KEY (timeSlotId) REFERENCES timeSlot(timeSlotId) ON DELETE CASCADE,
+    UNIQUE KEY uniq_tech_slot (technicianId, timeSlotId)
+);
+
 -- 3️⃣ Booking History table
 CREATE TABLE bookingHistory (
   historyId INT AUTO_INCREMENT PRIMARY KEY,

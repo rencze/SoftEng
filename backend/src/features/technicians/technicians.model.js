@@ -53,4 +53,28 @@ async function removeTechnician(userId) {
   return result;
 }
 
-module.exports = { getAllTechnicians, addTechnician, removeTechnician, syncTechnicians };
+// Get technicians along with availability for a given slot
+async function getTechniciansWithAvailability(date, timeSlotId) {
+  await syncTechnicians();
+
+  const [rows] = await pool.query(`
+    SELECT 
+      t.technicianId,
+      u.userId,
+      u.firstName,
+      u.lastName,
+      u.email,
+      u.contactNumber,
+      u.address,
+      (ta.isAvailable IS NULL OR ta.isAvailable = 1) AS available
+    FROM technicians t
+    JOIN users u ON t.userId = u.userId
+    LEFT JOIN technicianAvailability ta
+      ON t.technicianId = ta.technicianId
+      AND ta.timeSlotId = ?
+  `, [timeSlotId]);
+
+  return rows;
+}
+
+module.exports = { getAllTechnicians, addTechnician, removeTechnician, syncTechnicians, getTechniciansWithAvailability };
