@@ -75,6 +75,13 @@ async function createBookingModel({ customerId, technicianId, timeSlotId, notes 
       [bookingId, 1, "Booking created (Pending)"]
     );
 
+    // 🔵 Mark technician unavailable in availability table
+    await conn.query(`
+      INSERT INTO technicianAvailability (technicianId, timeSlotId, isAvailable)
+      VALUES (?, ?, FALSE)
+      ON DUPLICATE KEY UPDATE isAvailable = FALSE, updatedAt = CURRENT_TIMESTAMP
+    `, [technicianId, timeSlotId]);
+
     await conn.commit();
     return { bookingId, customerId, technicianId, timeSlotId, notes, statusId: 1 };
   } catch (err) {
@@ -185,7 +192,6 @@ async function getSlotsWithBookedTechniciansByDateModel(date) {
   return slots;
 }
 
-
 // 🟢 Get all technicians and mark if available for a specific date & slot
 async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
   const [rows] = await pool.query(`
@@ -193,41 +199,100 @@ async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
       t.technicianId,
       CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
       CASE 
-        WHEN b.bookingId IS NOT NULL THEN FALSE
+        WHEN ta.isAvailable = FALSE THEN FALSE
         ELSE TRUE
       END AS isAvailable
     FROM technicians t
     JOIN users u ON t.userId = u.userId
-    LEFT JOIN booking b
-      ON b.technicianId = t.technicianId
-      AND b.timeSlotId = ?
-      AND DATE(b.createdAt) = ?
-  `, [timeSlotId, date]);
+    LEFT JOIN technicianAvailability ta
+      ON ta.technicianId = t.technicianId
+      AND ta.timeSlotId = ?
+    LEFT JOIN timeSlot ts ON ta.timeSlotId = ts.timeSlotId
+  `, [timeSlotId]);
+  return rows;
+}
+
+//
+// 🟩 Technician Availability Management
+//
+
+// 🟢 Initialize technician availability for a new date
+async function initializeTechnicianAvailability(date) {
+  const [slotDateRows] = await pool.query(
+    "SELECT slotDateId FROM slotDate WHERE slotDate = ?",
+    [date]
+  );
+  const slotDate = slotDateRows[0];
+  if (!slotDate) throw new Error("Slot date not found");
+
+  const [slots] = await pool.query(
+    "SELECT timeSlotId FROM timeSlot WHERE slotDateId = ?",
+    [slotDate.slotDateId]
+  );
+
+  const [techs] = await pool.query("SELECT technicianId FROM technicians");
+
+  for (const slot of slots) {
+    for (const tech of techs) {
+      await pool.query(
+        `INSERT IGNORE INTO technicianAvailability (technicianId, timeSlotId, isAvailable)
+         VALUES (?, ?, TRUE)`,
+        [tech.technicianId, slot.timeSlotId]
+      );
+    }
+  }
+  return { initialized: true };
+}
+
+// 🟣 Get all technician availability for a given date
+async function getTechnicianAvailabilityByDateModel(date) {
+  const [slotDateRows] = await pool.query(
+    "SELECT slotDateId FROM slotDate WHERE slotDate = ?",
+    [date]
+  );
+  const slotDate = slotDateRows[0];
+  if (!slotDate) return [];
+
+  const [rows] = await pool.query(`
+    SELECT 
+      ta.technicianAvailabilityId,
+      ta.technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
+      ts.timeSlotId,
+      ts.startTime,
+      ts.endTime,
+      ta.isAvailable
+    FROM technicianAvailability ta
+    JOIN technicians t ON ta.technicianId = t.technicianId
+    JOIN users u ON t.userId = u.userId
+    JOIN timeSlot ts ON ta.timeSlotId = ts.timeSlotId
+    WHERE ts.slotDateId = ?
+    ORDER BY ts.startTime, technicianName
+  `, [slotDate.slotDateId]);
 
   return rows;
 }
 
-// 🟢 Get all technicians and mark if available for a specific date & slot
-// async function getTechnicianAvailabilityBySlotModel(date, timeSlotId) {
-//   const [rows] = await pool.query(`
-//     SELECT 
-//       t.technicianId,
-//       CONCAT(u.firstName, ' ', u.lastName) AS technicianName,
-//       CASE 
-//         WHEN b.bookingId IS NOT NULL THEN FALSE
-//         ELSE TRUE
-//       END AS isAvailable
-//     FROM technicians t
-//     JOIN users u ON t.userId = u.userId
-//     LEFT JOIN booking b
-//       ON b.technicianId = t.technicianId
-//       AND b.timeSlotId = ?
-//       AND DATE(b.createdAt) = ?
-//   `, [timeSlotId, date]);
+// 🟡 Update technician availability manually
+async function updateTechnicianAvailabilityModel(technicianId, timeSlotId, isAvailable) {
+  const [result] = await pool.query(
+    `INSERT INTO technicianAvailability (technicianId, timeSlotId, isAvailable)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE isAvailable = VALUES(isAvailable), updatedAt = CURRENT_TIMESTAMP`,
+    [technicianId, timeSlotId, isAvailable]
+  );
+  return result;
+}
 
-//   return rows;
-// }
-
+// 🔵 Automatically mark unavailable when booked
+async function markTechnicianUnavailable(technicianId, timeSlotId) {
+  await pool.query(
+    `UPDATE technicianAvailability 
+     SET isAvailable = FALSE 
+     WHERE technicianId = ? AND timeSlotId = ?`,
+    [technicianId, timeSlotId]
+  );
+}
 
 module.exports = {
   getAllBookingsModel,
@@ -239,5 +304,9 @@ module.exports = {
   getBookingHistoryModel,
   getBookedTechniciansBySlotAndDate,
   getSlotsWithBookedTechniciansByDateModel,
-   getTechnicianAvailabilityBySlotModel,
+  getTechnicianAvailabilityBySlotModel,
+  initializeTechnicianAvailability,
+  getTechnicianAvailabilityByDateModel,
+  updateTechnicianAvailabilityModel,
+  markTechnicianUnavailable,
 };

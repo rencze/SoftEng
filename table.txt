@@ -161,3 +161,25 @@ CREATE TABLE bookingHistory (
   INDEX idx_changedBy (changedBy)
 );
 
+ALTER TABLE booking ADD COLUMN bookingDate DATE AFTER technicianId;
+ALTER TABLE booking
+ADD COLUMN bookingDate DATE AFTER technicianId;
+DESCRIBE booking;
+
+-- Disable foreign key checks temporarily
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Truncate all related tables
+TRUNCATE TABLE bookingHistory;
+TRUNCATE TABLE booking;
+TRUNCATE TABLE technicianAvailability;
+TRUNCATE TABLE timeSlot;
+TRUNCATE TABLE slotDate;
+
+-- (Optional) truncate these if you want to reset everything
+-- TRUNCATE TABLE customers;
+-- TRUNCATE TABLE technicians;
+-- TRUNCATE TABLE bookingStatus;
+
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS = 1;
