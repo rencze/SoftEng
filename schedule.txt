@@ -31,67 +31,6 @@ export default function ScheduleManagementPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [blockedDays, setBlockedDays] = useState([]);
 
-  const [selectedTechnicians, setSelectedTechnicians] = useState([]);
-
-
-    // Fetch available technicians for a specific date and time slot
-const fetchAvailableTechnicians = async (date, timeSlotId) => {
-  try {
-    const response = await axios.get(`${BOOKING_API}/availability`, {
-      params: { date: moment(date).format("YYYY-MM-DD"), timeSlotId }
-    });
-    return response.data;
-  } catch (err) {
-    console.error("Error fetching technicians:", err);
-    return [];
-  }
-};
-
-// Block/Unblock technician using your existing endpoints
-const blockTechnician = async (technicianId, timeSlotId) => {
-  try {
-    await axios.post(`${BOOKING_API}/technicians/block`, {
-      technicianId,
-      timeSlotId
-    });
-  } catch (err) {
-    console.error("Error blocking technician:", err);
-    throw err;
-  }
-};
-
-const unblockTechnician = async (technicianId, timeSlotId) => {
-  try {
-    await axios.post(`${BOOKING_API}/technicians/unblock`, {
-      technicianId,
-      timeSlotId
-    });
-  } catch (err) {
-    console.error("Error unblocking technician:", err);
-    throw err;
-  }
-};
-
-// Bulk block/unblock - using your bulkBlockTechnician endpoint
-const bulkBlockTechnicians = async (technicianIds, date, timeSlotIds, isAvailable) => {
-  try {
-    const promises = technicianIds.map(technicianId => 
-      axios.post(`${BOOKING_API}/bulk-block`, {
-        technicianId,
-        date: date ? moment(date).format("YYYY-MM-DD") : undefined,
-        timeSlotIds: timeSlotIds && timeSlotIds.length > 0 ? timeSlotIds : undefined,
-        isAvailable
-      })
-    );
-    
-    await Promise.all(promises);
-  } catch (err) {
-    console.error("Error bulk blocking technicians:", err);
-    throw err;
-  }
-};
-
-
   // Initialize data
   useEffect(() => {
     fetchSchedules();
@@ -483,38 +422,7 @@ const bulkBlockTechnicians = async (technicianIds, date, timeSlotIds, isAvailabl
             </div>
 
             {modalType === "day" && (
-                  <div className="grid grid-cols-3 gap-6">
-                {/* Technician Section - Leftmost */}
-{/* Technician Section */}
-<div className="space-y-4">
-  <h3 className="text-lg font-semibold text-gray-700">Technicians</h3>
-  <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
-    {["John Doe", "Jane Smith", "Mike Johnson"].map((tech, index) => {
-      const isSelected = selectedTechnicians.includes(tech);
-
-      return (
-        <button
-          key={index}
-          onClick={() => {
-            setSelectedTechnicians(prev =>
-              isSelected
-                ? prev.filter(t => t !== tech)  // Deselect
-                : [...prev, tech]              // Select
-            );
-          }}
-          className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
-            isSelected
-              ? "bg-blue-600 text-white shadow-md"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          {tech}
-        </button>
-      );
-    })}
-  </div>
-</div>
-
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Calendar Section */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-700">Select Date(s)</h3>
@@ -758,31 +666,8 @@ const bulkBlockTechnicians = async (technicianIds, date, timeSlotIds, isAvailabl
                     </button>
                   </div>
                 </div>
-
-                {/* Technician Action Buttons */}
-                  <div className="pt-4 border-t flex gap-3">
-                    <button
-                      onClick={() => handleTechnicianOperation(true)}
-                      disabled={!selectedTechnicians.length}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                    >
-                      <FaBan /> Block Technician
-                    </button>
-
-                    <button
-                      onClick={() => handleTechnicianOperation(false)}
-                      disabled={!selectedTechnicians.length}
-                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                    >
-                      <FaCheckCircle /> Unblock Technician
-                    </button>
-                  </div>
-
-
               </div>
             )}
-
-
 
             {modalType === "time" && (
               <div className="py-12 text-center text-gray-500">

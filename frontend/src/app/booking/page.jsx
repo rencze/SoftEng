@@ -23,6 +23,8 @@ export default function Booking() {
   const [loadingTechs, setLoadingTechs] = useState(false);
 
   const [bookedTechIds, setBookedTechIds] = useState([]);
+  const [blockedDates, setBlockedDates] = useState({});
+  
 
   // Redirect if not logged in
   useEffect(() => {
@@ -34,6 +36,32 @@ export default function Booking() {
       }
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+  const loadBlockedDates = async () => {
+    try {
+      const monthStart = moment(currentDate).startOf("month").format("YYYY-MM-DD");
+      const monthEnd = moment(currentDate).endOf("month").format("YYYY-MM-DD");
+
+      const res = await fetch(`http://localhost:3001/api/slot-dates?start=${monthStart}&end=${monthEnd}`);
+      if (!res.ok) throw new Error("Failed to fetch slot dates");
+      const data = await res.json(); // Array of slotDate objects: { slotDate, isOpen, ... }
+
+      const blockedMap = {};
+      data.forEach((sd) => {
+        blockedMap[moment(sd.slotDate).format("YYYY-MM-DD")] = !sd.isOpen; // true = blocked
+      });
+
+      setBlockedDates(blockedMap);
+    } catch (err) {
+      console.error(err);
+      setBlockedDates({});
+    }
+  };
+
+  loadBlockedDates();
+}, [currentDate]);
+
 
   // Calendar logic
   const getDaysInMonth = () => {
@@ -261,7 +289,7 @@ export default function Booking() {
 
   const days = getDaysInMonth();
   const monthYear = moment(currentDate).format("MMMM YYYY");
-  const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"];
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!user) return <div className="p-8 text-center text-red-500 font-semibold">You must be logged in to access the calendar.</div>;
@@ -302,34 +330,40 @@ export default function Booking() {
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
-              {days.map(({ date, outside }, index) => {
-                const isToday = moment(date).isSame(new Date(), "day");
-                const isSelected = selectedDate && moment(date).isSame(selectedDate, "day");
-                const pastDate = isPastDate(date);
+<div className="grid grid-cols-7 gap-2">
+  {days.map(({ date, outside }, index) => {
+    const isToday = moment(date).isSame(new Date(), "day");
+    const isSelected = selectedDate && moment(date).isSame(selectedDate, "day");
+    const pastDate = isPastDate(date);
 
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      if (!outside && !pastDate) {
-                        setSelectedDate(date);
-                        fetchSlots(date);
-                      }
-                    }}
-                    disabled={outside || pastDate}
-                    className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
-                      ${outside || pastDate ? "text-gray-300 cursor-not-allowed" : ""}
-                      ${isSelected ? "bg-indigo-600 text-white shadow-md" :
-                        isToday && !outside ? "bg-indigo-100 text-indigo-600 font-semibold" :
-                        !outside && !pastDate ? "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600" : ""
-                      }`}
-                  >
-                    {moment(date).date()}
-                  </button>
-                );
-              })}
-            </div>
+    // <-- Add this line to get blocked status for the day
+    const dateStr = moment(date).format("YYYY-MM-DD");
+    const isBlocked = blockedDates[dateStr] || false;
+
+    return (
+      <button
+        key={index}
+        onClick={() => {
+          if (!outside && !pastDate && !isBlocked) {
+            setSelectedDate(date);
+            fetchSlots(date);
+          }
+        }}
+        // <-- Update disabled prop to include isBlocked
+        disabled={outside || pastDate || isBlocked}
+        className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
+          ${outside || pastDate ? "text-gray-300 cursor-not-allowed" : ""}
+          ${isBlocked ? "bg-red-100 text-red-700 cursor-not-allowed" : ""}
+          ${isSelected ? "bg-indigo-600 text-white shadow-md" :
+            isToday && !outside ? "bg-indigo-100 text-indigo-600 font-semibold" :
+            !outside && !pastDate ? "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600" : ""
+          }`}
+      >
+        {moment(date).date()}
+      </button>
+    );
+  })}
+</div>
           </div>
 
           {/* Time Slots */}
@@ -360,35 +394,39 @@ export default function Booking() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2">
-              {loadingSlots ? (
-                <p className="text-gray-500 text-center">Loading...</p>
-              ) : slots[period].length === 0 ? (
-                <p className="text-gray-500 text-center">No slots available.</p>
-              ) : (
-                slots[period].map((slot, idx) => {
-                  const fullTime = `${formatTime12h(slot.startTime)} - ${formatTime12h(slot.endTime)}`;
-                  const pastSlot = isPastSlot(selectedDate, slot.startTime);
+<div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2">
+  {loadingSlots ? (
+    <p className="text-gray-500 text-center">Loading...</p>
+  ) : slots[period].length === 0 ? (
+    <p className="text-gray-500 text-center">No slots available.</p>
+  ) : (
+    slots[period].map((slot, idx) => {
+      const fullTime = `${formatTime12h(slot.startTime)} - ${formatTime12h(slot.endTime)}`;
 
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSlotSelection(slot)}
-                      disabled={pastSlot}
-                      className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
-                        pastSlot
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : selectedHour?.id === slot.timeSlotId
-                          ? "bg-indigo-600 text-white shadow"
-                          : "bg-gray-50 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                      }`}
-                    >
-                      {fullTime}
-                    </button>
-                  );
-                })
-              )}
-            </div>
+      const pastSlot = isPastSlot(selectedDate, slot.startTime);
+      const blocked = !slot.isAvailable; // <-- check DB availability
+      const disabled = pastSlot || blocked;
+
+      return (
+        <button
+          key={idx}
+          onClick={() => handleSlotSelection(slot)}
+          disabled={disabled}
+          className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
+            disabled
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : selectedHour?.id === slot.timeSlotId
+              ? "bg-indigo-600 text-white shadow"
+              : "bg-gray-50 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+          }`}
+        >
+          {fullTime} {blocked && "(Blocked)"}
+        </button>
+      );
+    })
+  )}
+</div>
+
           </div>
 
           {/* Technicians */}

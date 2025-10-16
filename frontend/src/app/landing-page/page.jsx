@@ -24,6 +24,27 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+  // Handle hash URLs on page load
+  const handleHashScroll = () => {
+    if (window.location.hash) {
+      const sectionId = window.location.hash.replace('#', '');
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const offsetTop = element.getBoundingClientRect().top + window.pageYOffset - 100;
+          window.scrollTo({
+            top: offsetTop,
+            behavior: 'smooth'
+          });
+        }
+      }, 500); // Delay to ensure page is fully loaded
+    }
+  };
+
+  handleHashScroll();
+}, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

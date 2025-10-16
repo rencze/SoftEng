@@ -11,6 +11,8 @@ const {
   fetchBookedTechnicians,
   getSlotsWithBookedTechnicians,
   getTechnicianAvailability,
+  blockTechnician, 
+  unblockTechnician  
 } = require("./booking.controller");
 
 // 🟠 Technicians availability
@@ -25,26 +27,12 @@ router.post("/", createBooking);
 router.put("/:id", updateBooking);
 router.delete("/:id", deleteBooking);
 
+// 🟨 Block/Unblock technicians
+router.post("/technicians/block", blockTechnician);
+router.post("/technicians/unblock", unblockTechnician);
+
 // 🟧 Status & history
 router.patch("/:id/status", updateBookingStatus);
 router.get("/:id/history", getBookingHistory);
-
-
-// // 🟩 Bookings CRUD
-// router.get("/", getAllBookings);
-// router.get("/:id", getBookingById);
-// router.post("/", createBooking);
-// router.put("/:id", updateBooking);
-// router.delete("/:id", deleteBooking);
-
-// // 🟧 Status & history
-// router.patch("/:id/status", updateBookingStatus);
-// router.get("/:id/history", getBookingHistory);
-
-// // 🟠 Technicians availability
-// // 🟢 Technician availability (new endpoint)
-// router.get("/availability", getTechnicianAvailability);
-// router.get("/booked-technicians/:timeSlotId", fetchBookedTechnicians);
-// router.get("/slots-with-booked/:date", getSlotsWithBookedTechnicians);
 
 module.exports = router;

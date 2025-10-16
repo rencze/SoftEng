@@ -125,6 +125,85 @@ async function getTechnicianAvailability(req, res) {
   }
 }
 
+// 🟤 Block a technician for a specific slot
+async function blockTechnician(req, res) {
+  try {
+    const { technicianId, timeSlotId } = req.body;
+    if (!technicianId || !timeSlotId)
+      return res.status(400).json({ message: "Missing technicianId or timeSlotId" });
+
+    await BookingModel.updateTechnicianAvailabilityModel(technicianId, timeSlotId, false);
+    res.json({ message: "Technician blocked successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// 🟤 Unblock a technician for a specific slot
+async function unblockTechnician(req, res) {
+  try {
+    const { technicianId, timeSlotId } = req.body;
+    if (!technicianId || !timeSlotId)
+      return res.status(400).json({ message: "Missing technicianId or timeSlotId" });
+
+    await BookingModel.updateTechnicianAvailabilityModel(technicianId, timeSlotId, true);
+    res.json({ message: "Technician unblocked successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function bulkBlockTechnician(req, res) {
+  try {
+    const { technicianId, date, timeSlotIds, isAvailable } = req.body;
+
+    if (!technicianId)
+      return res.status(400).json({ message: "Missing technicianId" });
+
+    let targetTimeSlots = [];
+
+    if (date) {
+      // find all time slots for that date
+      const [slotDateRows] = await pool.query(
+        "SELECT slotDateId FROM slotDate WHERE slotDate = ?",
+        [date]
+      );
+      const slotDate = slotDateRows[0];
+      if (!slotDate)
+        return res.status(404).json({ message: "Date not found in slotDate table" });
+
+      const [slots] = await pool.query(
+        "SELECT timeSlotId FROM timeSlot WHERE slotDateId = ?",
+        [slotDate.slotDateId]
+      );
+      targetTimeSlots = slots.map((s) => s.timeSlotId);
+    } else if (timeSlotIds && Array.isArray(timeSlotIds)) {
+      targetTimeSlots = timeSlotIds;
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Provide date or timeSlotIds" });
+    }
+
+    for (const tsId of targetTimeSlots) {
+      await BookingModel.updateTechnicianAvailabilityModel(
+        technicianId,
+        tsId,
+        isAvailable
+      );
+    }
+
+    res.json({
+      message: `Technician ${
+        isAvailable ? "unblocked" : "blocked"
+      } successfully for ${targetTimeSlots.length} slot(s).`,
+    });
+  } catch (err) {
+    console.error("bulkBlockTechnician error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAllBookings,
   getBookingById,
@@ -136,4 +215,7 @@ module.exports = {
   fetchBookedTechnicians,
   getSlotsWithBookedTechnicians,
   getTechnicianAvailability,
+  blockTechnician,
+  unblockTechnician,
+  bulkBlockTechnician, 
 };
