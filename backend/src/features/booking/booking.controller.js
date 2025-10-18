@@ -153,54 +153,25 @@ async function unblockTechnician(req, res) {
   }
 }
 
-async function bulkBlockTechnician(req, res) {
+
+// 🟢 Get technician availability by technician and date
+async function getTechnicianAvailabilityByTechnician(req, res) {
   try {
-    const { technicianId, date, timeSlotIds, isAvailable } = req.body;
+    const { technicianId, date } = req.query;
 
-    if (!technicianId)
-      return res.status(400).json({ message: "Missing technicianId" });
-
-    let targetTimeSlots = [];
-
-    if (date) {
-      // find all time slots for that date
-      const [slotDateRows] = await pool.query(
-        "SELECT slotDateId FROM slotDate WHERE slotDate = ?",
-        [date]
-      );
-      const slotDate = slotDateRows[0];
-      if (!slotDate)
-        return res.status(404).json({ message: "Date not found in slotDate table" });
-
-      const [slots] = await pool.query(
-        "SELECT timeSlotId FROM timeSlot WHERE slotDateId = ?",
-        [slotDate.slotDateId]
-      );
-      targetTimeSlots = slots.map((s) => s.timeSlotId);
-    } else if (timeSlotIds && Array.isArray(timeSlotIds)) {
-      targetTimeSlots = timeSlotIds;
-    } else {
-      return res
-        .status(400)
-        .json({ message: "Provide date or timeSlotIds" });
+    if (!technicianId || !date) {
+      return res.status(400).json({ message: "Missing technicianId or date" });
     }
 
-    for (const tsId of targetTimeSlots) {
-      await BookingModel.updateTechnicianAvailabilityModel(
-        technicianId,
-        tsId,
-        isAvailable
-      );
-    }
+    const availability = await BookingModel.getTechnicianAvailabilityByTechnicianModel(
+      technicianId,
+      date
+    );
 
-    res.json({
-      message: `Technician ${
-        isAvailable ? "unblocked" : "blocked"
-      } successfully for ${targetTimeSlots.length} slot(s).`,
-    });
+    res.json(availability);
   } catch (err) {
-    console.error("bulkBlockTechnician error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching technician availability:", err);
+    res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -217,5 +188,5 @@ module.exports = {
   getTechnicianAvailability,
   blockTechnician,
   unblockTechnician,
-  bulkBlockTechnician, 
+  getTechnicianAvailabilityByTechnician
 };

@@ -294,6 +294,44 @@ async function markTechnicianUnavailable(technicianId, timeSlotId) {
   );
 }
 
+// 🟢 Get technician availability by technician and date
+async function getTechnicianAvailabilityByTechnicianModel(technicianId, date) {
+  try {
+    // Find slotDateId for the date
+    const [slotDateRows] = await pool.query(
+      "SELECT slotDateId FROM slotDate WHERE slotDate = ?",
+      [date]
+    );
+
+    if (slotDateRows.length === 0) return [];
+
+    const slotDateId = slotDateRows[0].slotDateId;
+
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        ts.timeSlotId,
+        ts.startTime,
+        ts.endTime,
+        COALESCE(ta.isAvailable, TRUE) AS isAvailable
+      FROM timeSlot ts
+      LEFT JOIN technicianAvailability ta 
+        ON ta.timeSlotId = ts.timeSlotId
+        AND ta.technicianId = ?
+      WHERE ts.slotDateId = ?
+      ORDER BY ts.startTime ASC
+      `,
+      [technicianId, slotDateId]
+    );
+
+    return rows;
+  } catch (err) {
+    console.error("Error in getTechnicianAvailabilityByTechnicianModel:", err);
+    throw err;
+  }
+}
+
+
 module.exports = {
   getAllBookingsModel,
   getBookingByIdModel,
@@ -309,4 +347,5 @@ module.exports = {
   getTechnicianAvailabilityByDateModel,
   updateTechnicianAvailabilityModel,
   markTechnicianUnavailable,
+  getTechnicianAvailabilityByTechnicianModel,
 };
