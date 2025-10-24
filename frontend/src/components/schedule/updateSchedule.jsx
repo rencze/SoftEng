@@ -8,7 +8,7 @@ import { FaTrash, FaTimes, FaSearch, FaCalendarAlt, FaClock, FaBan, FaCheckCircl
 const API_URL = "http://localhost:3001/api/slot-dates";
 const SLOT_API_BASE = "http://localhost:3001/api/slot-dates";
 
-export default function ScheduleManagementPage() {
+export default function UpdateSchedule() {
   const [schedules, setSchedules] = useState([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);

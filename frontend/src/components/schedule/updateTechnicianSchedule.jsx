@@ -7,7 +7,7 @@ import { FaTrash, FaTimes, FaSearch, FaCalendarAlt, FaClock, FaBan, FaCheckCircl
 
 const BOOKING_API_BASE = "http://localhost:3001/api/bookings";
 
-export default function ScheduleManagementPage() {
+export default function UpdateTechnicianScheduleModal() {
   const [schedules, setSchedules] = useState([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);

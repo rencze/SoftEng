@@ -1,47 +1,3 @@
-use soft_eng;
-
-CREATE TABLE vehicle (
-  vehicleId INT AUTO_INCREMENT PRIMARY KEY,
-  plateNumber VARCHAR(20) NOT NULL,
-  brand VARCHAR(100) NOT NULL,
-  model VARCHAR(100) NOT NULL,
-  year INT NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-
-CREATE TABLE businessDay (
-    businessDayId INT AUTO_INCREMENT PRIMARY KEY,
-    dayOfWeek ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
-    status ENUM('Open','Closed') DEFAULT 'Open'
-);
-
-CREATE TABLE timeSlot (
-    timeSlotId INT AUTO_INCREMENT PRIMARY KEY,
-    businessDayId INT NOT NULL,
-    startTime TIME NOT NULL,
-    endTime TIME NOT NULL,
-    status ENUM('Open','Closed') DEFAULT 'Open',
-    FOREIGN KEY (businessDayId) REFERENCES businessDay(businessDayId) ON DELETE CASCADE
-);
-
-INSERT INTO businessDay (dayOfWeek, status) VALUES
-('Monday', 'Open'),
-('Tuesday', 'Open'),
-('Wednesday', 'Open'),
-('Thursday', 'Open'),
-('Friday', 'Open'),
-('Saturday', 'Open'),
-('Sunday', 'Closed');
-
-CREATE TABLE customers (
-    customerId INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NOT NULL,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
 
 ----------------------NOT IMPLEMENTED-------------------------------------------
 
@@ -183,3 +139,144 @@ TRUNCATE TABLE slotDate;
 
 -- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+
+
+//====================NEW VEHICLE HISTORY=====================
+CREATE TABLE vehicleUser (
+  userId INT AUTO_INCREMENT PRIMARY KEY,
+  historyId INT NOT NULL,        -- link to vehicleOwnershipHistory
+  customerId INT NOT NULL,       -- the person using or managing the vehicle
+  relationship VARCHAR(50),      -- e.g., 'Owner', 'Wife', 'Husband', 'Driver'
+  isPrimaryUser BOOLEAN DEFAULT FALSE,
+  addedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_vu_history FOREIGN KEY (historyId)
+      REFERENCES vehicleOwnershipHistory(historyId) ON DELETE CASCADE,
+  CONSTRAINT fk_vu_customer FOREIGN KEY (customerId)
+      REFERENCES customers(customerId) ON DELETE CASCADE
+);
+
+
+
+vehicleOwnershipHistory(
+  historyId INT PK,
+  vehicleId INT,
+  customerId INT,      -- Legal owner
+  ownershipStart TIMESTAMP,
+  ownershipEnd TIMESTAMP,
+  ownerSequence INT,   -- 1st, 2nd, etc.
+  notes TEXT
+)
+
+
+
+//----------------------------------------------------
+
+-- =========================================
+-- 1️⃣ SERVICE JOB
+-- =========================================
+CREATE TABLE service_job (
+  serviceJobId INT AUTO_INCREMENT PRIMARY KEY,
+  currentStage ENUM('Diagnostic','Check-in','Repair','Testing','Completion') DEFAULT 'Diagnostic',
+  assignedTechnicianName VARCHAR(100),
+  startedAt DATETIME,
+  endedAt DATETIME
+);
+
+-- =========================================
+-- 2️⃣ SERVICE JOB WORKFLOW
+-- =========================================
+CREATE TABLE service_job_workflow (
+  serviceJobWorkFlowId INT AUTO_INCREMENT PRIMARY KEY,
+  serviceJobId INT NOT NULL,
+  currentStage ENUM('Diagnostic','Check-in','Repair','Testing','Completion'),
+  notes TEXT,
+  assignedTechnician VARCHAR(100),
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (serviceJobId) REFERENCES service_job(serviceJobId)
+    ON DELETE CASCADE
+);
+
+-- =========================================
+-- 3️⃣ SERVICE HISTORY
+-- =========================================
+CREATE TABLE service_history (
+  serviceHistoryId INT AUTO_INCREMENT PRIMARY KEY,
+  carProfileId INT NOT NULL,
+  packageName VARCHAR(150),
+  services TEXT,
+  description TEXT,
+  totalCost DOUBLE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================================
+-- 4️⃣ QUOTATION
+-- =========================================
+CREATE TABLE quotation (
+  quotationId INT AUTO_INCREMENT PRIMARY KEY,
+  technicianId INT NOT NULL,
+  customerId INT NOT NULL,
+  laborCost DOUBLE,
+  partsCost DOUBLE,
+  discount DOUBLE DEFAULT 0,
+  totalCost DOUBLE,
+  workTimeEstimation INT,
+  quote TEXT,
+  status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approvedAt DATETIME NULL,
+  FOREIGN KEY (bookingId) REFERENCES service_job(bookingId)
+    ON DELETE CASCADE
+);
+
+-- =========================================
+-- 5️⃣ SERVICE CONTRACT
+-- =========================================
+CREATE TABLE service_contract (
+  contractId INT AUTO_INCREMENT PRIMARY KEY,
+  serviceJobId INT NOT NULL,
+  scopeOfServices TEXT,
+  responsibilities TEXT,
+  duration INT,
+  agreementCost DOUBLE,
+  termsAndCondition TEXT,
+  status ENUM('Pending','Approved','Rejected','Expired') DEFAULT 'Pending',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approvedAt DATETIME NULL,
+  FOREIGN KEY (serviceJobId) REFERENCES service_job(serviceJobId)
+    ON DELETE CASCADE
+);
+
+
+////---------------------
+CREATE TABLE billing (
+  billingId INT AUTO_INCREMENT PRIMARY KEY,
+  quotationId INT,  -- or serviceJobId if preferred
+  totalAmount DOUBLE NOT NULL,
+  amountPaid DOUBLE DEFAULT 0,
+  balance DOUBLE GENERATED ALWAYS AS (totalAmount - amountPaid) STORED,
+  paymentStatus ENUM('Paid', 'Partial', 'No Payment') DEFAULT 'No Payment',
+  billingDate DATE DEFAULT (CURRENT_DATE),
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (quotationId) REFERENCES quotation(quotationId)
+    ON DELETE SET NULL
+);
+
+CREATE TABLE payment (
+  paymentId INT AUTO_INCREMENT PRIMARY KEY,
+  billingId INT NOT NULL,
+  amountPaid DOUBLE NOT NULL,
+  paymentDate DATE DEFAULT (CURRENT_DATE),
+  balance DOUBLE DEFAULT 0,
+  paymentMethod ENUM('Cash', 'GCash', 'Card', 'Credit', 'Online Transfer', 'Check') DEFAULT 'Cash',
+  remarks TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (billingId) REFERENCES billing(billingId)
+    ON DELETE CASCADE
+);

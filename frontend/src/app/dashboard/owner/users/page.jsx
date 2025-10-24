@@ -26,8 +26,8 @@
     const [sortField, setSortField] = useState("firstName");
     const [sortDirection, setSortDirection] = useState("asc");
     const [showFilters, setShowFilters] = useState(false);
-    const [editingUser, setEditingUser] = useState(null); // user being edited
-    const [editData, setEditData] = useState({});         // form data for editing
+    const [editingUser, setEditingUser] = useState(null); 
+    const [editData, setEditData] = useState({});        
 
       const [currentUser, setCurrentUser] = useState(null);
 

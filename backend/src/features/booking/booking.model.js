@@ -349,3 +349,18 @@ module.exports = {
   markTechnicianUnavailable,
   getTechnicianAvailabilityByTechnicianModel,
 };
+
+// 🧩 Check if customer already has an active booking
+// async function hasActiveBooking(customerId) {
+//   const [rows] = await pool.query(
+//     `
+//     SELECT bookingId FROM booking
+//     WHERE customerId = ?
+//       AND statusId IN (1, 2, 4)  -- Pending, Confirmed, Rescheduled
+//     `,
+//     [customerId]
+//   );
+//   return rows.length > 0;
+// }
+
+//  hasActiveBooking, // 🧩 add this line

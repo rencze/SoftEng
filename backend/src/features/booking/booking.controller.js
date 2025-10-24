@@ -175,6 +175,34 @@ async function getTechnicianAvailabilityByTechnician(req, res) {
   }
 }
 
+// 🟪 Reschedule existing booking
+async function rescheduleBooking(req, res) {
+  try {
+    const { id } = req.params;
+    const { timeSlotId, technicianId, rescheduledDate } = req.body;
+
+    if (!timeSlotId || !technicianId || !rescheduledDate) {
+      return res.status(400).json({ message: "Missing required fields." });
+    }
+
+    const updatedData = {
+      timeSlotId,
+      technicianId,
+      bookingDate: rescheduledDate,
+      statusId: 4, // 4 = "Rescheduled"
+    };
+
+    const result = await BookingModel.updateBookingModel(id, updatedData);
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Booking not found" });
+
+    res.json({ message: "Booking rescheduled successfully." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAllBookings,
   getBookingById,
@@ -188,5 +216,58 @@ module.exports = {
   getTechnicianAvailability,
   blockTechnician,
   unblockTechnician,
-  getTechnicianAvailabilityByTechnician
+  getTechnicianAvailabilityByTechnician,
+    rescheduleBooking, 
 };
+
+// 🟢 Create booking
+// async function createBooking(req, res) {
+//   try {
+//     const { customerId, technicianId, timeSlotId, notes } = req.body;
+
+//     // ⚙️ Toggle restriction ON/OFF
+//     const ENFORCE_SINGLE_ACTIVE_BOOKING = false; // 🔴 change to true later for production
+
+//     if (ENFORCE_SINGLE_ACTIVE_BOOKING) {
+//       const hasActive = await BookingModel.hasActiveBooking(customerId);
+//       if (hasActive) {
+//         return res.status(400).json({
+//           message: "You already have an active booking (Pending/Confirmed/Rescheduled).",
+//         });
+//       }
+//     }
+
+//     const booking = await BookingModel.createBookingModel({
+//       customerId,
+//       technicianId,
+//       timeSlotId,
+//       notes,
+//     });
+
+//     res.status(201).json({ message: "Booking created successfully", booking });
+//   } catch (err) {
+//     console.error("Error creating booking:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// }
+
+
+// ✅ Step 3: Behavior Summary
+// Mode	ENFORCE_SINGLE_ACTIVE_BOOKING	Behavior
+// 🧪 Testing	false	Allows unlimited bookings
+// 🚀 Production	true	Blocks new booking if user already has active one
+// ✅ Step 4: (Optional) — You Can Log a Warning for Testing
+
+// If you want to be reminded that validation is off:
+
+// if (!ENFORCE_SINGLE_ACTIVE_BOOKING) {
+//   console.warn("⚠️ Booking restriction is currently DISABLED (testing mode)");
+// }
+
+// 🔁 Summary of What You Did
+
+// Added a helper hasActiveBooking(customerId) in model.
+
+// Updated controller to optionally enforce the rule.
+
+// Controlled behavior with one flag: ENFORCE_SINGLE_ACTIVE_BOOKING.

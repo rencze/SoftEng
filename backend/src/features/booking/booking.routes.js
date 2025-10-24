@@ -13,7 +13,8 @@
     getTechnicianAvailability,
     blockTechnician, 
     unblockTechnician,
-    getTechnicianAvailabilityByTechnician
+    getTechnicianAvailabilityByTechnician,
+    rescheduleBooking,
   } = require("./booking.controller");
 
   // 🟠 Technicians availability
@@ -29,6 +30,9 @@
   router.post("/", createBooking);
   router.put("/:id", updateBooking);
   router.delete("/:id", deleteBooking);
+  router.put("/reschedule/:id", rescheduleBooking);
+
+  
 
   // 🟨 Block/Unblock technicians
   router.post("/technicians/block", blockTechnician);

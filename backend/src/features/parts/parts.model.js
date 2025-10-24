@@ -69,3 +69,19 @@ module.exports = {
   updatePart,
   deletePart,
 };
+
+
+// CREATE TABLE partsHistory (
+//   id INT AUTO_INCREMENT PRIMARY KEY,
+//   partId INT NOT NULL,
+//   reference_type ENUM('SERVICE_JOB', 'RESTOCK', 'MANUAL_ADJUSTMENT') NOT NULL,
+//   reference_id INT NULL,               -- links to serviceJob.id if applicable
+//   quantity_change INT NOT NULL,        -- + for stock in, - for stock out
+//   previous_quantity INT NOT NULL,
+//   new_quantity INT NOT NULL,
+//   remarks VARCHAR(255),
+//   technicianId INT NULL,               -- who performed the action
+//   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//   FOREIGN KEY (partId) REFERENCES parts(partId),
+//   FOREIGN KEY (technicianId) REFERENCES technicians(technicianId)
+// );
