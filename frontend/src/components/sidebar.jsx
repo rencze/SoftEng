@@ -121,7 +121,6 @@ export default function Sidebar({ isOpen }) {
             subLinks: [
               { name: "Vehicles", path: "/dashboard/owner/vehicles" },
               { name: "Register Vehicle", path: "/dashboard/owner/vehicles/register" },
-              { name: "Vehicle History", path: "/dashboard/owner/vehicles/register/registeredHistory" },
             ],
           },
  
@@ -133,8 +132,7 @@ export default function Sidebar({ isOpen }) {
           subLinks: [
             { name: "Bookings", path: "/dashboard/owner/bookings" },
             { name: "Quotations", path: "/dashboard/owner/quotations" },
-            { name: "Service Job", path: "/dashboard/owner/service-job" },
-            { name: "Schedules", path: "/dashboard/owner/technician-schedules" }, // ✅ added schedule
+            { name: "Schedules", path: "/dashboard/owner/technician-schedules" },
           ],
         },
 
@@ -166,7 +164,7 @@ export default function Sidebar({ isOpen }) {
           color: "teal",
           subLinks: [
             { name: "Parts", path: "/dashboard/owner/inventory" },
-            { name: "Stock Transaction History", path: "/dashboard/owner/inventory/invetoryTracking" },
+            { name: "Stock Transaction History", path: "/dashboard/owner/inventory/invetoryMovement" },
           ],
         },
       ];

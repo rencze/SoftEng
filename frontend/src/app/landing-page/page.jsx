@@ -168,12 +168,21 @@ export default function LandingPage() {
                 <Snowflake className="w-5 h-5 mr-3 group-hover:rotate-180 transition-transform duration-500" />
                 Book Your Service
                 <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </button> 
               
-              <button className="flex items-center justify-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-xl shadow-lg hover:bg-white/30 hover:shadow-xl border border-white/30 transition-all">
-                <Phone className="w-5 h-5 mr-3 text-blue-300" />
-                Call Now
-              </button>
+            <button 
+              onClick={() => {
+                if (user) {
+                  router.push("/booking/ServiceRequestBooking");
+                } else {
+                  router.push("/auth/login");
+                }
+              }}
+              className="group flex items-center justify-center px-8 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-xl shadow-lg hover:bg-white/30 hover:shadow-xl border border-white/30 transition-all transform hover:scale-105"
+            >
+              <Phone className="w-5 h-5 mr-3 text-blue-300 group-hover:animate-pulse" />
+              Request Service
+            </button>
             </div>
             
             {/* Clean Features */}
@@ -695,7 +704,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 {[
                   { icon: <Phone className="w-5 h-5" />, info: "+63 926 863 6456" },
-                  { icon: <Mail className="w-5 h-5" />, info: "hello@2loy.com" },
+                  { icon: <Mail className="w-5 h-5" />, info: "2LoyCarAircon@gmail.com" },
                   { icon: <MapPin className="w-5 h-5" />, info: "Purok 1 Rizal, Canocotan Tagum City, Philippines" }
                 ].map((contact, i) => (
                   <div key={i} className="flex items-center space-x-3">

@@ -1,26 +1,29 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   fetchParts,
   fetchPart,
   createPartController,
   updatePartController,
-  deletePartController
+  deletePartController,
+  fetchPartHistory,
+  fetchAllHistory,
+    stockInPartController, // Add this
+  bulkStockInController, // Add this
 } = require("./parts.controller");
 
-// Get all parts
+// ✅ Stock-in routes (add these BEFORE the dynamic routes)
+router.post("/:id/stock-in", stockInPartController);
+router.post("/bulk/stock-in", bulkStockInController);
+
+router.get("/history/all", fetchAllHistory);   // ✅ static first
+router.get("/:id/history", fetchPartHistory);  // ✅ also static before :id
 router.get("/", fetchParts);
 
-// Get single part by ID
-router.get("/:id", fetchPart);
-
-// Create new part
 router.post("/", createPartController);
-
-// Update part
 router.put("/:id", updatePartController);
-
-// Delete part
 router.delete("/:id", deletePartController);
+router.get("/:id", fetchPart);                 // ✅ dynamic last
 
 module.exports = router;

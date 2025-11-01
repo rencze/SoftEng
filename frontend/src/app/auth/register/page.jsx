@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import Navbar from "@/components/Navbar";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -84,20 +85,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50 p-4">
-      {/* Temporary Navbar */}
-      <header className="w-full bg-white/90 backdrop-blur-sm shadow-md border-b border-gray-200 fixed top-0 left-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">2LOY Car Aircon</h1>
-          <nav>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Home
-            </Link>
-          </nav>
-        </div>
-      </header>
+<Navbar />
 
       {/* Registration Card */}
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-lg w-full max-w-md text-center mt-16">

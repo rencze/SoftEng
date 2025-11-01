@@ -9,7 +9,11 @@ import {
   FaSearch,
   FaDownload,
   FaSort,
-  FaUsers
+  FaUsers,
+  FaCalendar,
+  FaCar,
+  FaDollarSign,
+  FaTimes
 } from "react-icons/fa";
 
 export default function CustomersPage() {
@@ -20,6 +24,7 @@ export default function CustomersPage() {
   const [sortField, setSortField] = useState("firstName");
   const [sortDirection, setSortDirection] = useState("asc");
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [viewingCustomer, setViewingCustomer] = useState(null);
   const [customerData, setCustomerData] = useState({
     firstName: "",
     lastName: "",
@@ -27,6 +32,40 @@ export default function CustomersPage() {
     contactNumber: "",
     address: "",
   });
+
+  // Static booking data for demonstration
+  const staticBookings = [
+    {
+      id: 1,
+      carModel: "Toyota Camry 2023",
+      bookingDate: "2024-01-15",
+      pickupDate: "2024-01-20",
+      returnDate: "2024-01-25",
+      totalAmount: "$450",
+      status: "Completed",
+      statusColor: "bg-green-100 text-green-800"
+    },
+    {
+      id: 2,
+      carModel: "Honda Civic 2024",
+      bookingDate: "2024-02-01",
+      pickupDate: "2024-02-10",
+      returnDate: "2024-02-15",
+      totalAmount: "$380",
+      status: "Upcoming",
+      statusColor: "bg-blue-100 text-blue-800"
+    },
+    {
+      id: 3,
+      carModel: "BMW X5 2023",
+      bookingDate: "2023-12-10",
+      pickupDate: "2023-12-15",
+      returnDate: "2023-12-20",
+      totalAmount: "$720",
+      status: "Completed",
+      statusColor: "bg-green-100 text-green-800"
+    }
+  ];
 
   useEffect(() => {
     async function loadCustomers() {
@@ -70,6 +109,14 @@ export default function CustomersPage() {
         address: "",
       });
     }
+  };
+
+  const openViewModal = (customer) => {
+    setViewingCustomer(customer);
+  };
+
+  const closeViewModal = () => {
+    setViewingCustomer(null);
   };
 
   const handleChange = (e) => {
@@ -251,7 +298,13 @@ export default function CustomersPage() {
                   <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.contactNumber}</div></td>
                   <td className="px-6 py-4"><div className="text-sm text-gray-900 max-w-xs truncate" title={c.address}>{c.address}</div></td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-800 transition-colors p-1" title="View"><FaEye /></button>
+                    <button 
+                      onClick={() => openViewModal(c)}
+                      className="text-blue-600 hover:text-blue-800 transition-colors p-1" 
+                      title="View"
+                    >
+                      <FaEye />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -287,6 +340,152 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* View Customer Details Modal */}
+      {viewingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800">Customer Details</h2>
+              <button 
+                onClick={closeViewModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FaTimes className="text-xl" />
+              </button>
+            </div>
+
+            {/* Customer Information */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-start space-x-6">
+                <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                  {viewingCustomer.firstName?.charAt(0)}{viewingCustomer.lastName?.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {viewingCustomer.firstName} {viewingCustomer.lastName}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600 mb-1">Email Address</p>
+                      <p className="text-gray-900 font-medium">{viewingCustomer.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 mb-1">Contact Number</p>
+                      <p className="text-gray-900 font-medium">{viewingCustomer.contactNumber}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-gray-600 mb-1">Address</p>
+                      <p className="text-gray-900 font-medium">{viewingCustomer.address || "No address provided"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking History */}
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <FaCalendar className="mr-2 text-blue-600" />
+                  Booking History
+                </h3>
+                <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                  {staticBookings.length} Bookings
+                </span>
+              </div>
+
+              {/* Bookings Table */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Car Model
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Booking Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pickup Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Return Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Amount
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {staticBookings.map(booking => (
+                      <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <FaCar className="mr-2 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">{booking.carModel}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {booking.bookingDate}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {booking.pickupDate}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {booking.returnDate}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center">
+                            <FaDollarSign className="mr-1 text-green-600" />
+                            {booking.totalAmount}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.statusColor}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Summary Statistics */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-600 font-medium">Total Spent</p>
+                  <p className="text-2xl font-bold text-blue-900">$1,550</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-green-600 font-medium">Completed Bookings</p>
+                  <p className="text-2xl font-bold text-green-900">2</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <p className="text-sm text-purple-600 font-medium">Loyalty Points</p>
+                  <p className="text-2xl font-bold text-purple-900">155</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={closeViewModal}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -280,3 +280,35 @@ CREATE TABLE payment (
   FOREIGN KEY (billingId) REFERENCES billing(billingId)
     ON DELETE CASCADE
 );
+
+
+//////////////////
+CREATE TABLE partsHistory (
+  partHistoryId INT AUTO_INCREMENT PRIMARY KEY,
+  partId INT NOT NULL,
+  serviceJobId INT NULL,               -- will link later
+  referenceType ENUM('ServiceJob', 'StockIn', 'ManualAdjustment') NOT NULL,
+  referenceId INT NULL,
+  quantityChange INT NOT NULL,
+  previousQuantity INT NOT NULL,
+  newQuantity INT NOT NULL,
+  remarks VARCHAR(255),
+  technicianId INT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (partId) REFERENCES parts(partId),
+  FOREIGN KEY (technicianId) REFERENCES technicians(technicianId)
+);
+
+//now implement
+ALTER TABLE partsHistory
+ADD CONSTRAINT fk_partsHistory_serviceJob
+FOREIGN KEY (serviceJobId)
+REFERENCES serviceJob(serviceJobId);
+
+ALTER TABLE partsHistory
+ADD COLUMN oldName VARCHAR(100) NULL,
+ADD COLUMN newName VARCHAR(100) NULL,
+ADD COLUMN oldPrice DECIMAL(10,2) NULL,
+ADD COLUMN newPrice DECIMAL(10,2) NULL,
+ADD COLUMN oldDescription VARCHAR(255) NULL,
+ADD COLUMN newDescription VARCHAR(255) NULL;
