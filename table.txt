@@ -110,7 +110,10 @@ CREATE TABLE bookingHistory (
 
   FOREIGN KEY (bookingId) REFERENCES booking(bookingId) ON DELETE CASCADE,
   FOREIGN KEY (statusId) REFERENCES bookingStatus(id),
-  FOREIGN KEY (changedBy) REFERENCES users(userId) ON DELETE SET NULL,
+  FOREIGN KEY (chang
+  
+  .
+  edBy) REFERENCES users(userId) ON DELETE SET NULL,
 
   INDEX idx_booking (bookingId),
   INDEX idx_status (statusId),
@@ -169,7 +172,6 @@ vehicleOwnershipHistory(
   ownerSequence INT,   -- 1st, 2nd, etc.
   notes TEXT
 )
-
 
 
 //----------------------------------------------------
@@ -250,11 +252,11 @@ CREATE TABLE service_contract (
     ON DELETE CASCADE
 );
 
-
 ////---------------------
 CREATE TABLE billing (
   billingId INT AUTO_INCREMENT PRIMARY KEY,
-  quotationId INT,  -- or serviceJobId if preferred
+  serviceJobId INT NOT NULL,            -- link to the actual job performed
+  quotationId INT DEFAULT NULL,         -- optional, reference to the original quote
   totalAmount DOUBLE NOT NULL,
   amountPaid DOUBLE DEFAULT 0,
   balance DOUBLE GENERATED ALWAYS AS (totalAmount - amountPaid) STORED,
@@ -263,9 +265,12 @@ CREATE TABLE billing (
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+  FOREIGN KEY (serviceJobId) REFERENCES serviceJob(serviceJobId)
+    ON DELETE CASCADE,
   FOREIGN KEY (quotationId) REFERENCES quotation(quotationId)
     ON DELETE SET NULL
 );
+
 
 CREATE TABLE payment (
   paymentId INT AUTO_INCREMENT PRIMARY KEY,
@@ -287,7 +292,7 @@ CREATE TABLE partsHistory (
   partHistoryId INT AUTO_INCREMENT PRIMARY KEY,
   partId INT NOT NULL,
   serviceJobId INT NULL,               -- will link later
-  referenceType ENUM('ServiceJob', 'StockIn', 'ManualAdjustment') NOT NULL,
+  rreferenceType ENUM('Service Job', 'Stock-in', 'Manual Adjustment') NOT NULL
   referenceId INT NULL,
   quantityChange INT NOT NULL,
   previousQuantity INT NOT NULL,
@@ -298,6 +303,25 @@ CREATE TABLE partsHistory (
   FOREIGN KEY (partId) REFERENCES parts(partId),
   FOREIGN KEY (technicianId) REFERENCES technicians(technicianId)
 );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //now implement
 ALTER TABLE partsHistory

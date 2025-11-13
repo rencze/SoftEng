@@ -131,6 +131,7 @@ export default function Sidebar({ isOpen }) {
           color: "yellow",
           subLinks: [
             { name: "Bookings", path: "/dashboard/owner/bookings" },
+            { name: "Service Request", path: "/dashboard/owner/bookings/service-request" },
             { name: "Quotations", path: "/dashboard/owner/quotations" },
             { name: "Schedules", path: "/dashboard/owner/technician-schedules" },
           ],
@@ -154,7 +155,7 @@ export default function Sidebar({ isOpen }) {
           color: "orange",
           subLinks: [
             { name: "Payments", path: "/dashboard/owner/payments" },
-            { name: "Payment History", path: "/dashboard/owner/payments/payment-history" },
+            
           ],
         },
 

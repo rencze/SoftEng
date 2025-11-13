@@ -10,8 +10,9 @@ const partsRoutes = require("./src/features/parts/parts.routes");
 const vehicleRoutes = require("./src/features/vehicle/vehicle.routes");
 const registeredVehicleRoutes = require("./src/features/registeredVehicle/registeredVehicle.routes");
 const slotDatesRoutes = require("./src/features/slotDates/slotDates.routes");
+const serviceRequestBookingRoutes = require("./src/features/serviceRequestBooking/serviceRequestBooking.routes")
 const bookingRoutes = require("./src/features/booking/booking.routes");
-
+const quotationRoutes = require("./src/features/quotation/quotation.routes");
 
 const app = express();
 
@@ -32,6 +33,8 @@ app.use("/api/parts", partsRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/registered-vehicle", registeredVehicleRoutes);
 app.use("/api/slot-dates", slotDatesRoutes);
+app.use("/api/service-request-bookings", serviceRequestBookingRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/quotations", quotationRoutes);
 
 module.exports = app;

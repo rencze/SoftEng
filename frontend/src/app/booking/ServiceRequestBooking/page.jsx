@@ -5,7 +5,7 @@ import moment from "moment";
 import { useRouter } from "next/navigation";
 import NavbarAfterLogin from "@/components/NavbarAfterLogin";
 import { useAuth } from "@/contexts/AuthContext";
-import { FaPlus, FaTrash, FaTools, FaBox, FaCogs } from "react-icons/fa";
+import { FaPlus, FaTrash, FaTools, FaBox, FaCalendarAlt, FaClock, FaUserCog } from "react-icons/fa";
 
 const API_BASE = "http://localhost:3001";
 
@@ -31,32 +31,20 @@ export default function ServiceRequestBooking() {
   // Quotation states
   const [availableServices, setAvailableServices] = useState([]);
   const [availableServicePackages, setAvailableServicePackages] = useState([]);
-  const [availableParts, setAvailableParts] = useState([]);
   
   const [selectedService, setSelectedService] = useState("");
   const [selectedServicePackage, setSelectedServicePackage] = useState("");
-  const [selectedPart, setSelectedPart] = useState("");
 
   const [quotation, setQuotation] = useState({
     services: [],
     servicePackages: [],
-    customParts: [],
     notes: ""
   });
 
   const [loading, setLoading] = useState({
     services: false,
-    packages: false,
-    parts: false
+    packages: false
   });
-
-  // Format currency helper function
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
-    }).format(value || 0);
-  };
 
   // Redirect if not logged in
   useEffect(() => {
@@ -74,7 +62,6 @@ export default function ServiceRequestBooking() {
     if (user) {
       fetchServices();
       fetchServicePackages();
-      fetchParts();
       loadBlockedDates();
     }
   }, [user, currentDate]);
@@ -132,29 +119,6 @@ export default function ServiceRequestBooking() {
     }
   };
 
-  // Fetch Parts
-  const fetchParts = async () => {
-    setLoading(prev => ({ ...prev, parts: true }));
-    try {
-      const response = await fetch(`${API_BASE}/api/parts`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        setAvailableParts(data);
-      } else {
-        throw new Error('Invalid parts data format: expected array');
-      }
-    } catch (error) {
-      console.error('Error fetching parts:', error);
-      setAvailableParts([]);
-    } finally {
-      setLoading(prev => ({ ...prev, parts: false }));
-    }
-  };
-
   // Quotation management functions
   const addService = () => {
     if (!selectedService) return;
@@ -168,8 +132,7 @@ export default function ServiceRequestBooking() {
         id: Date.now(),
         servicesId: service.servicesId || service.serviceId,
         servicesName: service.servicesName || service.serviceName,
-        servicesDescription: service.servicesDescription || service.serviceDescription,
-        price: service.price
+        servicesDescription: service.servicesDescription || service.serviceDescription
       };
       
       setQuotation(prev => ({
@@ -199,8 +162,7 @@ export default function ServiceRequestBooking() {
         id: Date.now(),
         servicePackageId: servicePackage.servicePackageId || servicePackage.packageId,
         packageName: servicePackage.packageName,
-        packageDescription: servicePackage.packageDescription,
-        packagePrice: servicePackage.packagePrice || servicePackage.price
+        packageDescription: servicePackage.packageDescription
       };
       
       setQuotation(prev => ({
@@ -215,45 +177,6 @@ export default function ServiceRequestBooking() {
     setQuotation(prev => ({
       ...prev,
       servicePackages: prev.servicePackages.filter(pkg => pkg.id !== id)
-    }));
-  };
-
-  const addCustomPart = () => {
-    if (!selectedPart) return;
-    
-    const part = availableParts.find(p => p.partId == selectedPart);
-    
-    if (part) {
-      const newPart = {
-        id: Date.now(),
-        partId: part.partId,
-        partName: part.partName,
-        partDescription: part.partDescription,
-        unitPrice: part.unitPrice,
-        quantity: 1
-      };
-      
-      setQuotation(prev => ({
-        ...prev,
-        customParts: [...prev.customParts, newPart]
-      }));
-      setSelectedPart("");
-    }
-  };
-
-  const removeCustomPart = (id) => {
-    setQuotation(prev => ({
-      ...prev,
-      customParts: prev.customParts.filter(part => part.id !== id)
-    }));
-  };
-
-  const handleCustomPartChange = (id, field, value) => {
-    setQuotation(prev => ({
-      ...prev,
-      customParts: prev.customParts.map(part => 
-        part.id === id ? { ...part, [field]: parseInt(value) || 0 } : part
-      )
     }));
   };
 
@@ -435,79 +358,78 @@ export default function ServiceRequestBooking() {
     }
   };
 
-  const handleBooking = async () => {
-    if (!selectedDate || !selectedHour?.id || !selectedTechnician?.id) {
-      alert("Please select a date, time, and technician.");
-      return;
-    }
+const handleServiceRequest = async () => {
+  // Enhanced validation
+  if (!selectedDate || !selectedHour?.id || !selectedTechnician?.id) {
+    alert("Please select a date, time, and technician.");
+    return;
+  }
 
-    if (!user?.customerId) {
-      alert("Customer ID not found. Please login again.");
-      return;
-    }
+  // Check if at least one service or package is selected
+  if (quotation.services.length === 0 && quotation.servicePackages.length === 0) {
+    alert("Please select at least one service or service package.");
+    return;
+  }
 
-    // Double-check if technician is still available
-    const isCurrentlyBooked = bookedTechIds.includes(selectedTechnician.id);
-    if (isCurrentlyBooked) {
-      alert("This technician is no longer available for the selected time slot. Please choose another technician.");
-      setSelectedTechnician(null);
-      return;
-    }
+  if (!user?.customerId) {
+    alert("Customer ID not found. Please login again.");
+    return;
+  }
 
-    const payload = {
-      customerId: user.customerId,
-      technicianId: selectedTechnician.id,
-      timeSlotId: selectedHour.id,
-      notes: quotation.notes,
-      services: quotation.services.map(service => ({
-        serviceId: service.servicesId,
-        quantity: 1
-      })),
-      servicePackages: quotation.servicePackages.map(pkg => ({
-        servicePackageId: pkg.servicePackageId,
-        quantity: 1
-      })),
-      customParts: quotation.customParts.map(part => ({
-        partId: part.partId,
-        quantity: part.quantity
-      }))
-    };
+  // Debug logging
+  console.log("Submitting with:", {
+    customerId: user.customerId,
+    timeSlotId: selectedHour.id,
+    servicesCount: quotation.services.length,
+    packagesCount: quotation.servicePackages.length
+  });
 
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/bookings`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        alert("Booking successful!");
-        // Refresh the booked technicians list
-        const updatedBookedIds = await fetchBookedTechnicians(selectedHour.id);
-        setBookedTechIds(updatedBookedIds);
-        
-        // Clear selections
-        setSelectedHour({ id: null, label: null });
-        setSelectedTechnician(null);
-        setQuotation({
-          services: [],
-          servicePackages: [],
-          customParts: [],
-          notes: ""
-        });
-      } else {
-        alert(data.message || "Booking failed. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Booking failed due to server error.");
-    }
+  const payload = {
+    customerId: user.customerId,
+    technicianId: selectedTechnician.id,
+    timeSlotId: selectedHour.id,
+    services: quotation.services.map(service => ({
+      serviceId: service.servicesId,
+      quantity: 1
+    })),
+    servicePackages: quotation.servicePackages.map(pkg => ({
+      servicePackageId: pkg.servicePackageId,
+      quantity: 1
+    })),
+    notes: quotation.notes
   };
+
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch("http://localhost:3001/api/service-request-bookings", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json", 
+        Authorization: `Bearer ${token}` 
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Service request submitted successfully!");
+      // Clear selections
+      setSelectedHour({ id: null, label: null });
+      setSelectedTechnician(null);
+      setSelectedDate(null);
+      setQuotation({
+        services: [],
+        servicePackages: [],
+        notes: ""
+      });
+    } else {
+      alert(data.message || "Service request failed.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Service request failed due to server error.");
+  }
+};
 
   const days = getDaysInMonth();
   const monthYear = moment(currentDate).format("MMMM YYYY");
@@ -526,492 +448,426 @@ export default function ServiceRequestBooking() {
           <p className="text-gray-600 text-lg">We repair for your convenience</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 w-full max-w-6xl flex gap-6">
-          {/* Calendar */}
-          <div className="w-1/3">
-            <div className="flex items-center justify-between mb-6">
-              <button 
-                onClick={() => navigate("PREV")} 
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                &lt;
-              </button>
-              <span className="text-lg font-semibold text-gray-800">{monthYear}</span>
-              <button 
-                onClick={() => navigate("NEXT")} 
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                &gt;
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-2 mb-3">
-              {weekDays.map((day, i) => (
-                <div key={i} className="text-center text-xs font-medium text-gray-500">{day}</div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-              {days.map(({ date, outside }, index) => {
-                const isToday = moment(date).isSame(new Date(), "day");
-                const isSelected = selectedDate && moment(date).isSame(selectedDate, "day");
-                const pastDate = isPastDate(date);
-                const dateStr = moment(date).format("YYYY-MM-DD");
-                const isBlocked = blockedDates[dateStr] || false;
-
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      if (!outside && !pastDate && !isBlocked) {
-                        setSelectedDate(date);
-                        fetchSlots(date);
-                      }
-                    }}
-                    disabled={outside || pastDate || isBlocked}
-                    className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
-                      ${outside || pastDate ? "text-gray-300 cursor-not-allowed" : ""}
-                      ${isBlocked ? "bg-red-100 text-red-700 cursor-not-allowed" : ""}
-                      ${isSelected ? "bg-indigo-600 text-white shadow-md" :
-                        isToday && !outside ? "bg-indigo-100 text-indigo-600 font-semibold" :
-                        !outside && !pastDate ? "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600" : ""
-                      }`}
+        {/* Main Booking Section */}
+        <div className="w-full max-w-6xl space-y-6">
+          {/* Calendar, Time & Technician Selection */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+              <FaCalendarAlt className="mr-2 text-blue-600" />
+              Schedule Your Service
+            </h2>
+            
+            <div className="flex gap-6">
+              {/* Calendar */}
+              <div className="w-1/3">
+                <div className="flex items-center justify-between mb-4">
+                  <button 
+                    onClick={() => navigate("PREV")} 
+                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
                   >
-                    {moment(date).date()}
+                    &lt;
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                  <span className="text-lg font-semibold text-gray-800">{monthYear}</span>
+                  <button 
+                    onClick={() => navigate("NEXT")} 
+                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 hover:text-indigo-600 transition-colors"
+                  >
+                    &gt;
+                  </button>
+                </div>
 
-          {/* Time Slots */}
-          <div className="w-1/3 flex flex-col">
-            <div className="mb-4 text-center">
-              <p className="text-sm text-gray-500">Selected Date</p>
-              <p className="text-lg font-semibold text-indigo-600">
-                {selectedDate ? moment(selectedDate).format("MMMM D, YYYY") : "No date selected"}
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-4 mb-4">
-              <button 
-                onClick={() => setPeriod("AM")} 
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  period === "AM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                AM
-              </button>
-              <button 
-                onClick={() => setPeriod("PM")} 
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  period === "PM" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                PM
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2">
-              {loadingSlots ? (
-                <p className="text-gray-500 text-center">Loading...</p>
-              ) : slots[period].length === 0 ? (
-                <p className="text-gray-500 text-center">No slots available.</p>
-              ) : (
-                slots[period].map((slot, idx) => {
-                  const fullTime = `${formatTime12h(slot.startTime)} - ${formatTime12h(slot.endTime)}`;
-                  const pastSlot = isPastSlot(selectedDate, slot.startTime);
-                  const blocked = !slot.isAvailable;
-                  const disabled = pastSlot || blocked;
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSlotSelection(slot)}
-                      disabled={disabled}
-                      className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
-                        disabled
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : selectedHour?.id === slot.timeSlotId
-                          ? "bg-indigo-600 text-white shadow"
-                          : "bg-gray-50 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                      }`}
-                    >
-                      {fullTime} {blocked && "(Blocked)"}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Technicians */}
-          <div className="w-1/3 flex flex-col justify-between">
-            <div className="mb-2">
-              <h3 className="text-gray-700 font-medium text-sm">Select Technician</h3>
-              {selectedHour?.id && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Available technicians for {selectedHour.label}
-                </p>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2 mb-4">
-              {loadingTechs ? (
-                <p className="text-gray-500 text-center">Loading technicians...</p>
-              ) : technicians.length === 0 ? (
-                <p className="text-gray-500 text-center">No technicians available.</p>
-              ) : (
-                technicians.map((tech) => {
-                  const isBooked = !tech.isAvailable;
-                  const isSelected = selectedTechnician?.id === tech.technicianId;
-
-                  return (
-                    <button
-                      key={tech.technicianId}
-                      onClick={() => handleTechnicianSelection(tech)}
-                      disabled={isBooked}
-                      className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
-                        isBooked
-                          ? "bg-red-100 text-red-700 cursor-not-allowed border border-red-200"
-                          : isSelected
-                          ? "bg-indigo-600 text-white shadow"
-                          : "bg-gray-50 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                      }`}
-                    >
-                      {tech.technicianName} 
-                      {isBooked && " (Booked)"}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-
-          </div>
-        </div>
-
-        {/* Services Section */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-6xl mt-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <FaTools className="mr-2 text-blue-600" />
-            Services
-            {loading.services && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
-          </h3>
-
-          {/* Add Service Form */}
-          <div className="bg-blue-50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-12 gap-3 items-end">
-              <div className="col-span-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Service
-                </label>
-                <select
-                  value={selectedService}
-                  onChange={(e) => setSelectedService(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={loading.services || availableServices.length === 0}
-                >
-                  <option value="">Choose a service...</option>
-                  {availableServices.map(service => (
-                    <option 
-                      key={service.servicesId || service.serviceId} 
-                      value={service.servicesId || service.serviceId}
-                    >
-                      {service.servicesName || service.serviceName} - {formatCurrency(service.price)}
-                    </option>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {weekDays.map((day, i) => (
+                    <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">{day}</div>
                   ))}
-                </select>
-                {availableServices.length === 0 && !loading.services && (
-                  <p className="text-red-500 text-sm mt-1">No services available.</p>
-                )}
-              </div>
-              <div className="col-span-4">
-                <button
-                  onClick={addService}
-                  disabled={!selectedService || loading.services}
-                  className="w-full bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  <FaPlus className="mr-2" />
-                  Add Service
-                </button>
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {/* Services Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {quotation.services.map((service) => (
-                  <tr key={service.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{service.servicesName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{service.servicesDescription}</td>
-                    <td className="px-4 py-3 text-sm font-medium">{formatCurrency(service.price)}</td>
-                    <td className="px-4 py-3">
+                <div className="grid grid-cols-7 gap-1">
+                  {days.map(({ date, outside }, index) => {
+                    const isToday = moment(date).isSame(new Date(), "day");
+                    const isSelected = selectedDate && moment(date).isSame(selectedDate, "day");
+                    const pastDate = isPastDate(date);
+                    const dateStr = moment(date).format("YYYY-MM-DD");
+                    const isBlocked = blockedDates[dateStr] || false;
+
+                    return (
                       <button
-                        onClick={() => removeService(service.id)}
-                        className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                        key={index}
+                        onClick={() => {
+                          if (!outside && !pastDate && !isBlocked) {
+                            setSelectedDate(date);
+                            fetchSlots(date);
+                          }
+                        }}
+                        disabled={outside || pastDate || isBlocked}
+                        className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
+                          ${outside || pastDate ? "text-gray-300 cursor-not-allowed" : ""}
+                          ${isBlocked ? "bg-red-100 text-red-700 cursor-not-allowed" : ""}
+                          ${isSelected ? "bg-indigo-600 text-white shadow-md" :
+                            isToday && !outside ? "bg-indigo-100 text-indigo-600 font-semibold" :
+                            !outside && !pastDate ? "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600" : ""
+                          }`}
                       >
-                        <FaTrash />
+                        {moment(date).date()}
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {quotation.services.length === 0 && (
-              <div className="text-center py-8 text-gray-500 bg-blue-50 rounded-lg">
-                <FaTools className="mx-auto text-3xl text-blue-300 mb-3" />
-                <p>No services added yet</p>
-                <p className="text-sm text-gray-400">Add services using the form above</p>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Service Packages Section */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-6xl mt-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <FaBox className="mr-2 text-green-600" />
-            Service Packages
-            {loading.packages && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
-          </h3>
+              {/* Time Slots */}
+              <div className="w-1/3 flex flex-col">
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <FaClock className="mr-2 text-green-600" />
+                    Available Time Slots
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {selectedDate ? moment(selectedDate).format("MMMM D, YYYY") : "Select a date first"}
+                  </p>
+                </div>
 
-          {/* Add Service Package Form */}
-          <div className="bg-green-50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-12 gap-3 items-end">
-              <div className="col-span-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Service Package
-                </label>
-                <select
-                  value={selectedServicePackage}
-                  onChange={(e) => setSelectedServicePackage(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  disabled={loading.packages || availableServicePackages.length === 0}
-                >
-                  <option value="">Choose a service package...</option>
-                  {availableServicePackages.map(pkg => (
-                    <option 
-                      key={pkg.servicePackageId || pkg.packageId} 
-                      value={pkg.servicePackageId || pkg.packageId}
-                    >
-                      {pkg.packageName} - {formatCurrency(pkg.packagePrice || pkg.price)}
-                    </option>
-                  ))}
-                </select>
-                {availableServicePackages.length === 0 && !loading.packages && (
-                  <p className="text-red-500 text-sm mt-1">No service packages available.</p>
-                )}
-              </div>
-              <div className="col-span-4">
-                <button
-                  onClick={addServicePackage}
-                  disabled={!selectedServicePackage || loading.packages}
-                  className="w-full bg-green-600 text-white rounded-lg px-3 py-2 hover:bg-green-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  <FaPlus className="mr-2" />
-                  Add Package
-                </button>
-              </div>
-            </div>
-          </div>
+                <div className="flex justify-center gap-2 mb-4">
+                  <button 
+                    onClick={() => setPeriod("AM")} 
+                    className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm ${
+                      period === "AM" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    Morning
+                  </button>
+                  <button 
+                    onClick={() => setPeriod("PM")} 
+                    className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm ${
+                      period === "PM" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    Afternoon
+                  </button>
+                </div>
 
-          {/* Service Packages Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Package Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {quotation.servicePackages.map((pkg) => (
-                  <tr key={pkg.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{pkg.packageName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{pkg.packageDescription}</td>
-                    <td className="px-4 py-3 text-sm font-medium">{formatCurrency(pkg.packagePrice)}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => removeServicePackage(pkg.id)}
-                        className="text-red-600 hover:text-red-800 p-2 transition-colors"
-                      >
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2 max-h-60">
+                  {loadingSlots ? (
+                    <p className="text-gray-500 text-center py-4">Loading time slots...</p>
+                  ) : slots[period].length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">No slots available</p>
+                  ) : (
+                    slots[period].map((slot, idx) => {
+                      const fullTime = `${formatTime12h(slot.startTime)} - ${formatTime12h(slot.endTime)}`;
+                      const pastSlot = isPastSlot(selectedDate, slot.startTime);
+                      const blocked = !slot.isAvailable;
+                      const disabled = pastSlot || blocked;
 
-            {quotation.servicePackages.length === 0 && (
-              <div className="text-center py-8 text-gray-500 bg-green-50 rounded-lg">
-                <FaBox className="mx-auto text-3xl text-green-300 mb-3" />
-                <p>No service packages added yet</p>
-                <p className="text-sm text-gray-400">Add service packages using the form above</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Custom Parts Section */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-6xl mt-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <FaCogs className="mr-2 text-purple-600" />
-            Custom Parts
-            {loading.parts && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
-          </h3>
-
-          {/* Add Custom Part Form */}
-          <div className="bg-purple-50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-12 gap-3 items-end">
-              <div className="col-span-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Part
-                </label>
-                <select
-                  value={selectedPart}
-                  onChange={(e) => setSelectedPart(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  disabled={loading.parts || availableParts.length === 0}
-                >
-                  <option value="">Choose a part...</option>
-                  {availableParts.map(part => (
-                    <option key={part.partId} value={part.partId}>
-                      {part.partName} - {formatCurrency(part.unitPrice)} (Stock: {part.quantity || 0})
-                    </option>
-                  ))}
-                </select>
-                {availableParts.length === 0 && !loading.parts && (
-                  <p className="text-red-500 text-sm mt-1">No parts available.</p>
-                )}
-              </div>
-              <div className="col-span-4">
-                <button
-                  onClick={addCustomPart}
-                  disabled={!selectedPart || loading.parts}
-                  className="w-full bg-purple-600 text-white rounded-lg px-3 py-2 hover:bg-purple-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  <FaPlus className="mr-2" />
-                  Add Part
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Custom Parts Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Part Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {quotation.customParts.map((part) => {
-                  const partTotal = (part.quantity || 0) * (part.unitPrice || 0);
-                  return (
-                    <tr key={part.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">{part.partName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{part.partDescription}</td>
-                      <td className="px-4 py-3 text-sm">{formatCurrency(part.unitPrice)}</td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={part.quantity || 1}
-                          onChange={(e) => handleCustomPartChange(part.id, 'quantity', e.target.value)}
-                          min="1"
-                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">{formatCurrency(partTotal)}</td>
-                      <td className="px-4 py-3">
+                      return (
                         <button
-                          onClick={() => removeCustomPart(part.id)}
-                          className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                          key={idx}
+                          onClick={() => handleSlotSelection(slot)}
+                          disabled={disabled}
+                          className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                            disabled
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : selectedHour?.id === slot.timeSlotId
+                              ? "bg-green-600 text-white shadow"
+                              : "bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-600"
+                          }`}
                         >
-                          <FaTrash />
+                          {fullTime}
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {quotation.customParts.length === 0 && (
-              <div className="text-center py-8 text-gray-500 bg-purple-50 rounded-lg">
-                <FaCogs className="mx-auto text-3xl text-purple-300 mb-3" />
-                <p>No custom parts added yet</p>
-                <p className="text-sm text-gray-400">Add custom parts using the form above</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Notes Section */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-6xl mt-6">
-          <h3 className="text-lg font-semibold mb-4">Additional Notes</h3>
-          <textarea
-            name="notes"
-            value={quotation.notes}
-            onChange={handleQuotationChange}
-            rows={6}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter any additional notes, terms, or conditions for this quotation..."
-          />
-        </div>
-                          <button
-              onClick={handleBooking}
-              disabled={!selectedDate || !selectedHour?.id || !selectedTechnician?.id}
-              className={`mt-2 py-3 rounded-lg font-medium text-sm transition ${
-                !selectedDate || !selectedHour?.id || !selectedTechnician?.id
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              }`}
-            >
-              Request Service Now
-            </button>
-
-            {/* Booking Summary */}
-            {(selectedDate || selectedHour?.id || selectedTechnician?.id) && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-medium text-gray-700 mb-2">Service Request Summary</h4>
-                <div className="text-sm text-gray-600 space-y-1">
-                  {selectedDate && (
-                    <p>Date: {moment(selectedDate).format("MMMM D, YYYY")}</p>
-                  )}
-                  {selectedHour?.label && (
-                    <p>Time: {selectedHour.label}</p>
-                  )}
-                  {selectedTechnician?.name && (
-                    <p>Technician: {selectedTechnician.name}</p>
+                      );
+                    })
                   )}
                 </div>
               </div>
-            )}
 
+              {/* Technicians */}
+              <div className="w-1/3 flex flex-col">
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <FaUserCog className="mr-2 text-purple-600" />
+                    Available Technicians
+                  </h3>
+                  {selectedHour?.id && (
+                    <p className="text-xs text-gray-500">
+                      For {selectedHour.label}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto border rounded-lg p-3 space-y-2 max-h-60">
+                  {loadingTechs ? (
+                    <p className="text-gray-500 text-center py-4">Loading technicians...</p>
+                  ) : technicians.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">
+                      {selectedHour?.id ? "No technicians available" : "Select a time slot first"}
+                    </p>
+                  ) : (
+                    technicians.map((tech) => {
+                      const isBooked = !tech.isAvailable;
+                      const isSelected = selectedTechnician?.id === tech.technicianId;
+
+                      return (
+                        <button
+                          key={tech.technicianId}
+                          onClick={() => handleTechnicianSelection(tech)}
+                          disabled={isBooked}
+                          className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                            isBooked
+                              ? "bg-red-100 text-red-700 cursor-not-allowed border border-red-200"
+                              : isSelected
+                              ? "bg-purple-600 text-white shadow"
+                              : "bg-gray-50 text-gray-700 hover:bg-purple-50 hover:text-purple-600"
+                          }`}
+                        >
+                          {tech.technicianName}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Services Section */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <FaTools className="mr-2 text-blue-600" />
+              Select Services
+              {loading.services && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
+            </h3>
+
+            {/* Add Service Form */}
+            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Choose Service
+                  </label>
+                  <select
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={loading.services || availableServices.length === 0}
+                  >
+                    <option value="">Select a service...</option>
+                    {availableServices.map(service => (
+                      <option 
+                        key={service.servicesId || service.serviceId} 
+                        value={service.servicesId || service.serviceId}
+                      >
+                        {service.servicesName || service.serviceName}
+                      </option>
+                    ))}
+                  </select>
+                  {availableServices.length === 0 && !loading.services && (
+                    <p className="text-red-500 text-sm mt-1">No services available</p>
+                  )}
+                </div>
+                <div className="col-span-4">
+                  <button
+                    onClick={addService}
+                    disabled={!selectedService || loading.services}
+                    className="w-full bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                  >
+                    <FaPlus className="mr-2" />
+                    Add Service
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Services List */}
+            <div className="space-y-3">
+              {quotation.services.map((service) => (
+                <div key={service.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium text-gray-800">{service.servicesName}</p>
+                    <p className="text-sm text-gray-600">{service.servicesDescription}</p>
+                  </div>
+                  <button
+                    onClick={() => removeService(service.id)}
+                    className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))}
+
+              {quotation.services.length === 0 && (
+                <div className="text-center py-8 text-gray-500 bg-blue-50 rounded-lg">
+                  <FaTools className="mx-auto text-3xl text-blue-300 mb-3" />
+                  <p>No services added yet</p>
+                  <p className="text-sm text-gray-400">Add services using the form above</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Service Packages Section */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <FaBox className="mr-2 text-green-600" />
+              Select Service Packages
+              {loading.packages && <span className="ml-2 text-sm text-gray-500">Loading...</span>}
+            </h3>
+
+            {/* Add Service Package Form */}
+            <div className="bg-green-50 rounded-lg p-4 mb-6">
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Choose Package
+                  </label>
+                  <select
+                    value={selectedServicePackage}
+                    onChange={(e) => setSelectedServicePackage(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={loading.packages || availableServicePackages.length === 0}
+                  >
+                    <option value="">Select a package...</option>
+                    {availableServicePackages.map(pkg => (
+                      <option 
+                        key={pkg.servicePackageId || pkg.packageId} 
+                        value={pkg.servicePackageId || pkg.packageId}
+                      >
+                        {pkg.packageName}
+                      </option>
+                    ))}
+                  </select>
+                  {availableServicePackages.length === 0 && !loading.packages && (
+                    <p className="text-red-500 text-sm mt-1">No service packages available</p>
+                  )}
+                </div>
+                <div className="col-span-4">
+                  <button
+                    onClick={addServicePackage}
+                    disabled={!selectedServicePackage || loading.packages}
+                    className="w-full bg-green-600 text-white rounded-lg px-3 py-2 hover:bg-green-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                  >
+                    <FaPlus className="mr-2" />
+                    Add Package
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Packages List */}
+            <div className="space-y-3">
+              {quotation.servicePackages.map((pkg) => (
+                <div key={pkg.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium text-gray-800">{pkg.packageName}</p>
+                    <p className="text-sm text-gray-600">{pkg.packageDescription}</p>
+                  </div>
+                  <button
+                    onClick={() => removeServicePackage(pkg.id)}
+                    className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))}
+
+              {quotation.servicePackages.length === 0 && (
+                <div className="text-center py-8 text-gray-500 bg-green-50 rounded-lg">
+                  <FaBox className="mx-auto text-3xl text-green-300 mb-3" />
+                  <p>No service packages added yet</p>
+                  <p className="text-sm text-gray-400">Add service packages using the form above</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Notes Section */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold mb-4">Additional Notes</h3>
+            <textarea
+              name="notes"
+              value={quotation.notes}
+              onChange={handleQuotationChange}
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter any additional notes, special requirements, or details about your service request..."
+            />
+          </div>
+
+          {/* Request Service Button with Summary - Stacked Layout */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="space-y-6">
+              {/* Service Request Summary - Now above the button */}
+              {(selectedDate || selectedHour?.id || selectedTechnician?.id || quotation.services.length > 0 || quotation.servicePackages.length > 0) && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-3">Service Request Summary</h4>
+                  
+                  {/* Date, Time, Technician Summary */}
+                  <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                    {selectedDate && (
+                      <div>
+                        <p className="text-blue-600 font-medium">Date</p>
+                        <p className="text-gray-700">{moment(selectedDate).format("MMMM D, YYYY")}</p>
+                      </div>
+                    )}
+                    {selectedHour?.label && (
+                      <div>
+                        <p className="text-blue-600 font-medium">Time</p>
+                        <p className="text-gray-700">{selectedHour.label}</p>
+                      </div>
+                    )}
+                    {selectedTechnician?.name && (
+                      <div>
+                        <p className="text-blue-600 font-medium">Technician</p>
+                        <p className="text-gray-700">{selectedTechnician.name}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Services Summary */}
+                  {quotation.services.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-blue-600 font-medium text-sm mb-1">Selected Services:</p>
+                      <div className="space-y-1">
+                        {quotation.services.map(service => (
+                          <p key={service.id} className="text-gray-700 text-sm">• {service.servicesName}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Packages Summary */}
+                  {quotation.servicePackages.length > 0 && (
+                    <div>
+                      <p className="text-blue-600 font-medium text-sm mb-1">Selected Packages:</p>
+                      <div className="space-y-1">
+                        {quotation.servicePackages.map(pkg => (
+                          <p key={pkg.id} className="text-gray-700 text-sm">• {pkg.packageName}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Request Service Button - Now below the summary */}
+              <div className="text-center">
+                <button
+                  onClick={handleServiceRequest}
+                  disabled={!selectedDate || !selectedHour?.id || !selectedTechnician?.id}
+                  className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all ${
+                    !selectedDate || !selectedHour?.id || !selectedTechnician?.id
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  }`}
+                >
+                  Request Service Now
+                </button>
+                <p className="text-sm text-gray-500 mt-3">
+                  Please ensure you have selected a date, time, and technician before submitting your request
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-            
-            
     </div>
   );
 }
