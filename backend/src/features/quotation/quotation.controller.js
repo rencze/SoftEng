@@ -45,6 +45,9 @@ async function createQuotationController(req, res) {
       bookingId,
       technicianId,
       customerId,
+      guestName,
+      guestContact,
+      guestEmail,
       laborCost = 0,
       partsCost = 0,
       discount = 0,
@@ -53,8 +56,11 @@ async function createQuotationController(req, res) {
       status = 'Pending'
     } = req.body;
 
-    if (!customerId) {
-      return res.status(400).json({ error: "Customer ID is required" });
+    // Validate: either customerId OR guest information must be provided
+    if (!customerId && (!guestName || !guestContact)) {
+      return res.status(400).json({ 
+        error: "Either customerId OR guestName and guestContact are required" 
+      });
     }
 
     const newQuotation = await createQuotation({
@@ -62,6 +68,9 @@ async function createQuotationController(req, res) {
       bookingId,
       technicianId,
       customerId,
+      guestName,
+      guestContact,
+      guestEmail,
       laborCost,
       partsCost,
       discount,

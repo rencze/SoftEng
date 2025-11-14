@@ -11,17 +11,16 @@ import {
   FaUser,
   FaCalendarAlt,
   FaDollarSign,
-  FaEye
+  FaEye,
+  FaSearch,
+  FaBook
 } from "react-icons/fa";
 
-// Use the same base URL as your other pages
 const API_BASE = "http://localhost:3001";
 
 export default function QuotationModal({ onClose, onSave }) {
   const [quotation, setQuotation] = useState({
-    quotationNumber: `QTN-${Date.now().toString().slice(-4)}`,
-    bookingNumber: `BK-${new Date().getFullYear()}-${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,
-    date: new Date().toISOString().split('T')[0],
+    customerId: "",
     customerName: "",
     email: "",
     phone: "",
@@ -33,36 +32,126 @@ export default function QuotationModal({ onClose, onSave }) {
     workTimeEstimation: 0,
     services: [],
     servicePackages: [],
-    customParts: []
+    customParts: [],
+    bookingId: "" // Added bookingId field
   });
 
   const [availableServices, setAvailableServices] = useState([]);
   const [availableServicePackages, setAvailableServicePackages] = useState([]);
   const [availableParts, setAvailableParts] = useState([]);
+  const [availableCustomers, setAvailableCustomers] = useState([]);
+  const [availableBookings, setAvailableBookings] = useState([]);
   const [selectedService, setSelectedService] = useState("");
   const [selectedServicePackage, setSelectedServicePackage] = useState("");
   const [selectedPart, setSelectedPart] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [bookingSearch, setBookingSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [showBookingDropdown, setShowBookingDropdown] = useState(false);
+  const [isExistingCustomer, setIsExistingCustomer] = useState(false);
+  const [isFromBooking, setIsFromBooking] = useState(false);
   const [loading, setLoading] = useState({
     services: false,
     packages: false,
-    parts: false
+    parts: false,
+    customers: false,
+    bookings: false,
+    saving: false
   });
   const [showPreview, setShowPreview] = useState(false);
 
-  // Fetch services, service packages, and parts from backend
+  // Get authentication token
+  const getAuthToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // Fetch services, service packages, parts, customers, and bookings from backend
   useEffect(() => {
     fetchServices();
     fetchServicePackages();
     fetchParts();
+    fetchCustomers();
+    fetchBookings();
   }, []);
+
+  // Filter customers based on search
+  const filteredCustomers = availableCustomers.filter(customer =>
+    customer.firstName?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    customer.lastName?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    customer.contactNumber?.includes(customerSearch)
+  );
+
+  // Filter bookings based on search
+  const filteredBookings = availableBookings.filter(booking =>
+    booking.bookingId?.toString().includes(bookingSearch) ||
+    booking.customerName?.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+    booking.technicianName?.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+    booking.statusName?.toLowerCase().includes(bookingSearch.toLowerCase())
+  );
+
+  const fetchCustomers = async () => {
+    setLoading(prev => ({ ...prev, customers: true }));
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/customers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch customers: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setAvailableCustomers(data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setAvailableCustomers([]);
+    } finally {
+      setLoading(prev => ({ ...prev, customers: false }));
+    }
+  };
+
+  const fetchBookings = async () => {
+    setLoading(prev => ({ ...prev, bookings: true }));
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/bookings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch bookings: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setAvailableBookings(data);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setAvailableBookings([]);
+    } finally {
+      setLoading(prev => ({ ...prev, bookings: false }));
+    }
+  };
 
   const fetchServices = async () => {
     setLoading(prev => ({ ...prev, services: true }));
     try {
-      const response = await fetch(`${API_BASE}/api/services`);
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/services`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch services');
       const data = await response.json();
-      console.log('Fetched services:', data);
       setAvailableServices(data);
     } catch (error) {
       console.error('Error fetching services:', error);
@@ -75,10 +164,15 @@ export default function QuotationModal({ onClose, onSave }) {
   const fetchServicePackages = async () => {
     setLoading(prev => ({ ...prev, packages: true }));
     try {
-      const response = await fetch(`${API_BASE}/api/service-packages`);
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/service-packages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch service packages');
       const data = await response.json();
-      console.log('Fetched service packages:', data);
       setAvailableServicePackages(data);
     } catch (error) {
       console.error('Error fetching service packages:', error);
@@ -91,13 +185,17 @@ export default function QuotationModal({ onClose, onSave }) {
   const fetchParts = async () => {
     setLoading(prev => ({ ...prev, parts: true }));
     try {
-      const response = await fetch(`${API_BASE}/api/parts`);
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE}/api/parts`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      
-      console.log('Fetched parts data:', data);
       
       if (Array.isArray(data)) {
         setAvailableParts(data);
@@ -130,38 +228,120 @@ export default function QuotationModal({ onClose, onSave }) {
   const subtotal = servicesSubtotal + servicePackagesSubtotal + customPartsSubtotal + (quotation.laborCost || 0);
   const discountAmount = subtotal * (quotation.discount / 100);
   const totalAfterDiscount = subtotal - discountAmount;
-  const taxRate = 0.1;
-  const tax = totalAfterDiscount * taxRate;
-  const total = totalAfterDiscount + tax;
+  const total = totalAfterDiscount;
 
-  // Prepare quotation data for preview
-  const getPreviewQuotation = () => {
+  // Prepare quotation data for backend
+  const prepareQuotationData = () => {
     return {
-      ...quotation,
-      services: quotation.services.map(service => ({
-        name: service.servicesName,
-        description: service.servicesDescription,
-        price: service.price
-      })),
-      packages: quotation.servicePackages.map(pkg => ({
-        name: pkg.packageName,
-        description: pkg.packageDescription,
-        price: pkg.packagePrice
-      })),
-      parts: quotation.customParts.map(part => ({
-        name: part.partName,
-        description: part.partDescription,
-        unitPrice: part.unitPrice,
-        qty: part.quantity
-      })),
-      servicesTotal: servicesSubtotal,
-      packagesTotal: servicePackagesSubtotal,
-      partsTotal: customPartsSubtotal,
-      subtotal,
-      discountValue: discountAmount,
-      tax,
-      total
+      customerId: quotation.customerId || null,
+      customerName: quotation.customerName,
+      email: quotation.email,
+      phone: quotation.phone,
+      address: quotation.address,
+      laborCost: parseFloat(quotation.laborCost) || 0,
+      discount: parseFloat(quotation.discount) || 0,
+      workTimeEstimation: parseFloat(quotation.workTimeEstimation) || 0,
+      quote: quotation.notes,
+      validity: parseInt(quotation.validity) || 30,
+      services: quotation.services,
+      servicePackages: quotation.servicePackages,
+      customParts: quotation.customParts,
+      bookingId: quotation.bookingId || null,
+      status: 'Draft'
     };
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer) => {
+    setQuotation(prev => ({
+      ...prev,
+      customerId: customer.userId || customer.customerId,
+      customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+      email: customer.email || "",
+      phone: customer.contactNumber || "",
+      address: customer.address || "",
+      bookingId: "" // Clear booking when selecting customer directly
+    }));
+    setCustomerSearch(`${customer.firstName} ${customer.lastName}`.trim());
+    setShowCustomerDropdown(false);
+    setIsExistingCustomer(true);
+    setIsFromBooking(false);
+  };
+
+  // Handle booking selection
+  const handleBookingSelect = (booking) => {
+    // Find the full customer details from available customers
+    const customerFromBooking = availableCustomers.find(c => 
+      c.customerId === booking.customerId || c.userId === booking.customerId
+    );
+
+    setQuotation(prev => ({
+      ...prev,
+      bookingId: booking.bookingId,
+      customerId: booking.customerId,
+      customerName: booking.customerName || "",
+      email: customerFromBooking?.email || "",
+      phone: customerFromBooking?.contactNumber || "",
+      address: customerFromBooking?.address || ""
+    }));
+    setBookingSearch(`Booking #${booking.bookingId} - ${booking.customerName}`);
+    setShowBookingDropdown(false);
+    
+    // If booking has customer info, auto-fill it
+    if (booking.customerName) {
+      setIsExistingCustomer(true);
+      setIsFromBooking(true);
+    }
+  };
+
+  // Handle manual customer info change
+  const handleCustomerInfoChange = (e) => {
+    const { name, value } = e.target;
+    setQuotation(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // If user starts typing manually, treat as guest customer
+    if (name === "customerName" && value && (isExistingCustomer || isFromBooking)) {
+      setIsExistingCustomer(false);
+      setIsFromBooking(false);
+      setQuotation(prev => ({
+        ...prev,
+        customerId: "",
+        bookingId: "" // Also clear booking when manually editing
+      }));
+    }
+  };
+
+  // Clear customer selection
+  const handleClearCustomer = () => {
+    setQuotation(prev => ({
+      ...prev,
+      customerId: "",
+      customerName: "",
+      email: "",
+      phone: "",
+      address: "",
+      bookingId: "" // Also clear booking
+    }));
+    setCustomerSearch("");
+    setBookingSearch("");
+    setIsExistingCustomer(false);
+    setIsFromBooking(false);
+    setShowCustomerDropdown(false);
+    setShowBookingDropdown(false);
+  };
+
+  // Clear booking selection
+  const handleClearBooking = () => {
+    setQuotation(prev => ({
+      ...prev,
+      bookingId: ""
+    }));
+    setBookingSearch("");
+    setShowBookingDropdown(false);
+    setIsFromBooking(false);
   };
 
   const addService = () => {
@@ -180,11 +360,10 @@ export default function QuotationModal({ onClose, onSave }) {
     }
 
     const serviceToAdd = {
-      id: Date.now(),
       servicesId: selectedServiceData.servicesId || selectedServiceData.serviceId,
       servicesName: selectedServiceData.servicesName || selectedServiceData.serviceName,
       servicesDescription: selectedServiceData.servicesDescription || selectedServiceData.description,
-      price: selectedServiceData.price
+      price: parseFloat(selectedServiceData.price) || 0
     };
 
     setQuotation(prev => ({
@@ -211,11 +390,10 @@ export default function QuotationModal({ onClose, onSave }) {
     }
 
     const packageToAdd = {
-      id: Date.now(),
       servicePackageId: selectedPackageData.servicePackageId || selectedPackageData.packageId,
       packageName: selectedPackageData.packageName,
       packageDescription: selectedPackageData.packageDescription || selectedPackageData.description,
-      packagePrice: selectedPackageData.packagePrice || selectedPackageData.price
+      packagePrice: parseFloat(selectedPackageData.packagePrice || selectedPackageData.price) || 0
     };
 
     setQuotation(prev => ({
@@ -238,16 +416,12 @@ export default function QuotationModal({ onClose, onSave }) {
       return;
     }
 
-    console.log('Adding part:', selectedPartData);
-
     const partToAdd = {
-      id: Date.now(),
       partId: selectedPartData.partId,
       partName: selectedPartData.partName,
       partDescription: selectedPartData.partDescription || '',
       unitPrice: parseFloat(selectedPartData.unitPrice) || 0,
-      quantity: 1,
-      inventoryQuantity: selectedPartData.quantity || 0
+      quantity: 1
     };
 
     setQuotation(prev => ({
@@ -258,55 +432,54 @@ export default function QuotationModal({ onClose, onSave }) {
     setSelectedPart("");
   };
 
-  const removeService = (id) => {
+  const removeService = (index) => {
     setQuotation(prev => ({
       ...prev,
-      services: prev.services.filter(service => service.id !== id)
+      services: prev.services.filter((_, i) => i !== index)
     }));
   };
 
-  const removeServicePackage = (id) => {
+  const removeServicePackage = (index) => {
     setQuotation(prev => ({
       ...prev,
-      servicePackages: prev.servicePackages.filter(pkg => pkg.id !== id)
+      servicePackages: prev.servicePackages.filter((_, i) => i !== index)
     }));
   };
 
-  const removeCustomPart = (id) => {
+  const removeCustomPart = (index) => {
     setQuotation(prev => ({
       ...prev,
-      customParts: prev.customParts.filter(part => part.id !== id)
+      customParts: prev.customParts.filter((_, i) => i !== index)
     }));
   };
 
-const handleQuotationChange = (e) => {
-  const { name, value } = e.target;
-  const numericFields = ["discount", "validity", "laborCost", "workTimeEstimation"];
-  
-  let newValue;
-  if (numericFields.includes(name)) {
-    // Allow empty string during typing, only convert to number when there's a valid input
-    if (value === "" || value === "-") {
-      newValue = value; // Keep as string to allow typing
+  const handleQuotationChange = (e) => {
+    const { name, value } = e.target;
+    const numericFields = ["discount", "validity", "laborCost", "workTimeEstimation"];
+    
+    let newValue;
+    if (numericFields.includes(name)) {
+      if (value === "" || value === "-") {
+        newValue = value;
+      } else {
+        const parsed = parseFloat(value);
+        newValue = isNaN(parsed) ? 0 : parsed;
+      }
     } else {
-      const parsed = parseFloat(value);
-      newValue = isNaN(parsed) ? 0 : parsed;
+      newValue = value;
     }
-  } else {
-    newValue = value;
-  }
 
-  setQuotation((prev) => ({
-    ...prev,
-    [name]: newValue,
-  }));
-};
+    setQuotation((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
+  };
 
-  const handleCustomPartChange = (id, field, value) => {
+  const handleCustomPartChange = (index, field, value) => {
     setQuotation(prev => ({
       ...prev,
-      customParts: prev.customParts.map(part => 
-        part.id === id ? { 
+      customParts: prev.customParts.map((part, i) => 
+        i === index ? { 
           ...part, 
           [field]: field === 'quantity' ? Math.max(1, parseInt(value) || 1) : value 
         } : part
@@ -314,24 +487,43 @@ const handleQuotationChange = (e) => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!quotation.customerName) {
       alert("Please fill customer details");
       return;
     }
 
-    const newQuotation = {
-      ...quotation,
-      quotationId: Date.now(),
-      subtotal,
-      discountAmount,
-      tax,
-      total,
-      status: "Draft",
-      createdAt: new Date().toISOString()
-    };
+    setLoading(prev => ({ ...prev, saving: true }));
 
-    onSave(newQuotation);
+    try {
+      const quotationData = prepareQuotationData();
+      const token = getAuthToken();
+      
+      const response = await fetch(`${API_BASE}/api/quotations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(quotationData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create quotation');
+      }
+
+      const savedQuotation = await response.json();
+      
+      // Call the onSave callback with the saved quotation
+      onSave(savedQuotation);
+      
+    } catch (error) {
+      console.error('Error saving quotation:', error);
+      alert(`Failed to save quotation: ${error.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
   };
 
   const handlePreview = () => {
@@ -350,6 +542,12 @@ const handleQuotationChange = (e) => {
     }).format(value || 0);
   };
 
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-PH');
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -363,6 +561,7 @@ const handleQuotationChange = (e) => {
               <button
                 onClick={onClose}
                 className="text-white hover:text-blue-200 transition-colors p-2"
+                disabled={loading.saving}
               >
                 <FaTimes size={24} />
               </button>
@@ -376,9 +575,177 @@ const handleQuotationChange = (e) => {
                   <h3 className="text-lg font-semibold flex items-center">
                     <FaUser className="mr-2 text-blue-600" />
                     Customer Details
+                    {isExistingCustomer && (
+                      <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                        Existing Customer
+                      </span>
+                    )}
+                    {isFromBooking && (
+                      <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                        From Booking
+                      </span>
+                    )}
+                    {loading.customers && (
+                      <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                        Loading...
+                      </span>
+                    )}
                   </h3>
                   
                   <div className="grid grid-cols-1 gap-4">
+                    {/* Booking Search */}
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Search by Booking ID
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({availableBookings.length} bookings available)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={bookingSearch}
+                          onChange={(e) => {
+                            setBookingSearch(e.target.value);
+                            setShowBookingDropdown(true);
+                          }}
+                          onFocus={() => setShowBookingDropdown(true)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Search by booking ID, customer name, or status..."
+                          disabled={loading.saving || loading.bookings}
+                        />
+                        <FaBook className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        {bookingSearch && (
+                          <button
+                            onClick={handleClearBooking}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            disabled={loading.saving}
+                          >
+                            <FaTimes />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Booking Dropdown */}
+                      {showBookingDropdown && bookingSearch && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {loading.bookings ? (
+                            <div className="p-3 text-center text-gray-500">Loading bookings...</div>
+                          ) : filteredBookings.length > 0 ? (
+                            filteredBookings.map(booking => (
+                              <div
+                                key={booking.bookingId}
+                                className="p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => handleBookingSelect(booking)}
+                              >
+                                <div className="font-medium flex justify-between items-start">
+                                  <span>Booking #{booking.bookingId}</span>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    booking.statusName === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                                    booking.statusName === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    booking.statusName === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {booking.statusName}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  <div className="font-medium">Customer: {booking.customerName}</div>
+                                  {booking.technicianName && (
+                                    <div>Technician: {booking.technicianName}</div>
+                                  )}
+                                  {booking.createdAt && (
+                                    <div>Booking Date: {formatDate(booking.createdAt)}</div>
+                                  )}
+                                  {booking.notes && (
+                                    <div className="text-xs text-gray-500 truncate" title={booking.notes}>
+                                      Notes: {booking.notes}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-center text-gray-500">
+                              {availableBookings.length === 0 
+                                ? "No bookings available in the system." 
+                                : "No bookings found. Try a different search term."}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Customer Search */}
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Search Existing Customer
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({availableCustomers.length} customers available)
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setShowCustomerDropdown(true);
+                          }}
+                          onFocus={() => setShowCustomerDropdown(true)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Search by name, email, or phone..."
+                          disabled={loading.saving || loading.customers}
+                        />
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        {customerSearch && (
+                          <button
+                            onClick={handleClearCustomer}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            disabled={loading.saving}
+                          >
+                            <FaTimes />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Customer Dropdown */}
+                      {showCustomerDropdown && customerSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {loading.customers ? (
+                            <div className="p-3 text-center text-gray-500">Loading customers...</div>
+                          ) : filteredCustomers.length > 0 ? (
+                            filteredCustomers.map(customer => (
+                              <div
+                                key={customer.userId || customer.customerId}
+                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => handleCustomerSelect(customer)}
+                              >
+                                <div className="font-medium">
+                                  {customer.firstName} {customer.lastName}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {customer.email} • {customer.contactNumber}
+                                </div>
+                                {customer.address && (
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {customer.address}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-center text-gray-500">
+                              {availableCustomers.length === 0 
+                                ? "No customers available in the system." 
+                                : "No customers found. Continue typing to create a guest customer."}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Customer Name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Customer Name *
@@ -387,10 +754,11 @@ const handleQuotationChange = (e) => {
                         type="text"
                         name="customerName"
                         value={quotation.customerName}
-                        onChange={handleQuotationChange}
+                        onChange={handleCustomerInfoChange}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="John Doe"
                         required
+                        disabled={loading.saving}
                       />
                     </div>
 
@@ -403,9 +771,10 @@ const handleQuotationChange = (e) => {
                           type="email"
                           name="email"
                           value={quotation.email}
-                          onChange={handleQuotationChange}
+                          onChange={handleCustomerInfoChange}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="john@example.com"
+                          disabled={loading.saving}
                         />
                       </div>
                       <div>
@@ -416,9 +785,10 @@ const handleQuotationChange = (e) => {
                           type="tel"
                           name="phone"
                           value={quotation.phone}
-                          onChange={handleQuotationChange}
+                          onChange={handleCustomerInfoChange}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="+1 (555) 123-4567"
+                          disabled={loading.saving}
                         />
                       </div>
                     </div>
@@ -430,65 +800,42 @@ const handleQuotationChange = (e) => {
                       <textarea
                         name="address"
                         value={quotation.address}
-                        onChange={handleQuotationChange}
+                        onChange={handleCustomerInfoChange}
                         rows={2}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter customer address"
+                        disabled={loading.saving}
                       />
                     </div>
+
+                    {/* Booking ID Display */}
+                    {quotation.bookingId && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm font-medium text-purple-800">
+                              Linked to Booking #{quotation.bookingId}
+                            </span>
+                            <button
+                              onClick={handleClearBooking}
+                              className="ml-2 text-xs text-purple-600 hover:text-purple-800"
+                            >
+                              Remove Link
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center">
                     <FaCalendarAlt className="mr-2 text-green-600" />
-                    Quotation & Booking Details
+                    Quotation Details
                   </h3>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quotation Number
-                      </label>
-                      <input
-                        type="text"
-                        name="quotationNumber"
-                        value={quotation.quotationNumber}
-                        onChange={handleQuotationChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 font-mono"
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Booking Number
-                      </label>
-                      <input
-                        type="text"
-                        name="bookingNumber"
-                        value={quotation.bookingNumber}
-                        onChange={handleQuotationChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 font-mono"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date
-                      </label>
-                      <input
-                        type="date"
-                        name="date"
-                        value={quotation.date}
-                        onChange={handleQuotationChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Validity (Days)
@@ -500,7 +847,27 @@ const handleQuotationChange = (e) => {
                         onChange={handleQuotationChange}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="1"
+                        disabled={loading.saving}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Discount (%)
+                      </label>
+                      <div className="flex">
+                        <input
+                          type="number"
+                          name="discount"
+                          value={quotation.discount}
+                          onChange={handleQuotationChange}
+                          min="0"
+                          max="100"
+                          className="w-full border border-gray-300 rounded-l-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={loading.saving}
+                        />
+                        <span className="bg-gray-200 px-3 py-2 rounded-r-lg text-sm flex items-center">%</span>
+                      </div>
                     </div>
                   </div>
 
@@ -509,54 +876,37 @@ const handleQuotationChange = (e) => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Labor Cost
                       </label>
-<input
-  type="number"
-  name="laborCost"
-  value={quotation.laborCost}
-  onChange={handleQuotationChange}
-  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-  min="0"
-  step="0.01"
-/>
-
+                      <input
+                        type="number"
+                        name="laborCost"
+                        value={quotation.laborCost}
+                        onChange={handleQuotationChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="0"
+                        step="0.01"
+                        disabled={loading.saving}
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Estimated Labor Time (hours)
+                        Estimated Time (hours)
                       </label>
-<input
-  type="number"
-  name="workTimeEstimation"
-  value={quotation.workTimeEstimation}
-  onChange={handleQuotationChange}
-  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-  min="0"
-  step="0.5"
-/>
+                      <input
+                        type="number"
+                        name="workTimeEstimation"
+                        value={quotation.workTimeEstimation}
+                        onChange={handleQuotationChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="0"
+                        step="0.5"
+                        disabled={loading.saving}
+                      />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Quotation Discount (%)
-                    </label>
-{/* Discount Input */}
-<div className="flex">
-  <input
-    type="number"
-    name="discount"
-    value={quotation.discount}
-    onChange={handleQuotationChange}
-    min="0"
-    max="100"
-    className="w-full border border-gray-300 rounded-l-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-  />
-  <span className="bg-gray-200 px-3 py-2 rounded-r-lg text-sm flex items-center">%</span>
-</div>
                   </div>
                 </div>
               </div>
 
+              {/* Rest of the component remains the same */}
               {/* Services Section */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -575,7 +925,7 @@ const handleQuotationChange = (e) => {
                         value={selectedService}
                         onChange={(e) => setSelectedService(e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        disabled={loading.services || availableServices.length === 0}
+                        disabled={loading.services || availableServices.length === 0 || loading.saving}
                       >
                         <option value="">Choose a service...</option>
                         {availableServices.map(service => (
@@ -594,7 +944,7 @@ const handleQuotationChange = (e) => {
                     <div className="col-span-4">
                       <button
                         onClick={addService}
-                        disabled={!selectedService || loading.services}
+                        disabled={!selectedService || loading.services || loading.saving}
                         className="w-full bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         <FaPlus className="mr-2" />
@@ -615,15 +965,16 @@ const handleQuotationChange = (e) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {quotation.services.map((service) => (
-                        <tr key={service.id} className="hover:bg-gray-50">
+                      {quotation.services.map((service, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium">{service.servicesName}</td>
                           <td className="px-4 py-3 text-sm text-gray-500">{service.servicesDescription}</td>
                           <td className="px-4 py-3 text-sm font-medium">{formatCurrency(service.price)}</td>
                           <td className="px-4 py-3">
                             <button
-                              onClick={() => removeService(service.id)}
+                              onClick={() => removeService(index)}
                               className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                              disabled={loading.saving}
                             >
                               <FaTrash />
                             </button>
@@ -661,7 +1012,7 @@ const handleQuotationChange = (e) => {
                         value={selectedServicePackage}
                         onChange={(e) => setSelectedServicePackage(e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        disabled={loading.packages || availableServicePackages.length === 0}
+                        disabled={loading.packages || availableServicePackages.length === 0 || loading.saving}
                       >
                         <option value="">Choose a service package...</option>
                         {availableServicePackages.map(pkg => (
@@ -680,7 +1031,7 @@ const handleQuotationChange = (e) => {
                     <div className="col-span-4">
                       <button
                         onClick={addServicePackage}
-                        disabled={!selectedServicePackage || loading.packages}
+                        disabled={!selectedServicePackage || loading.packages || loading.saving}
                         className="w-full bg-green-600 text-white rounded-lg px-3 py-2 hover:bg-green-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         <FaPlus className="mr-2" />
@@ -701,15 +1052,16 @@ const handleQuotationChange = (e) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {quotation.servicePackages.map((pkg) => (
-                        <tr key={pkg.id} className="hover:bg-gray-50">
+                      {quotation.servicePackages.map((pkg, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium">{pkg.packageName}</td>
                           <td className="px-4 py-3 text-sm text-gray-500">{pkg.packageDescription}</td>
                           <td className="px-4 py-3 text-sm font-medium">{formatCurrency(pkg.packagePrice)}</td>
                           <td className="px-4 py-3">
                             <button
-                              onClick={() => removeServicePackage(pkg.id)}
+                              onClick={() => removeServicePackage(index)}
                               className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                              disabled={loading.saving}
                             >
                               <FaTrash />
                             </button>
@@ -747,7 +1099,7 @@ const handleQuotationChange = (e) => {
                         value={selectedPart}
                         onChange={(e) => setSelectedPart(e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        disabled={loading.parts || availableParts.length === 0}
+                        disabled={loading.parts || availableParts.length === 0 || loading.saving}
                       >
                         <option value="">Choose a part...</option>
                         {availableParts.map(part => (
@@ -763,7 +1115,7 @@ const handleQuotationChange = (e) => {
                     <div className="col-span-4">
                       <button
                         onClick={addCustomPart}
-                        disabled={!selectedPart || loading.parts}
+                        disabled={!selectedPart || loading.parts || loading.saving}
                         className="w-full bg-purple-600 text-white rounded-lg px-3 py-2 hover:bg-purple-700 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
                         <FaPlus className="mr-2" />
@@ -786,10 +1138,10 @@ const handleQuotationChange = (e) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {quotation.customParts.map((part) => {
+                      {quotation.customParts.map((part, index) => {
                         const partTotal = (part.quantity || 0) * (part.unitPrice || 0);
                         return (
-                          <tr key={part.id} className="hover:bg-gray-50">
+                          <tr key={index} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-sm font-medium">{part.partName}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{part.partDescription}</td>
                             <td className="px-4 py-3 text-sm">{formatCurrency(part.unitPrice)}</td>
@@ -797,16 +1149,18 @@ const handleQuotationChange = (e) => {
                               <input
                                 type="number"
                                 value={part.quantity || 1}
-                                onChange={(e) => handleCustomPartChange(part.id, 'quantity', e.target.value)}
+                                onChange={(e) => handleCustomPartChange(index, 'quantity', e.target.value)}
                                 min="1"
                                 className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={loading.saving}
                               />
                             </td>
                             <td className="px-4 py-3 text-sm font-medium">{formatCurrency(partTotal)}</td>
                             <td className="px-4 py-3">
                               <button
-                                onClick={() => removeCustomPart(part.id)}
+                                onClick={() => removeCustomPart(index)}
                                 className="text-red-600 hover:text-red-800 p-2 transition-colors"
+                                disabled={loading.saving}
                               >
                                 <FaTrash />
                               </button>
@@ -839,6 +1193,7 @@ const handleQuotationChange = (e) => {
                       rows={6}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Enter any additional notes, terms, or conditions for this quotation..."
+                      disabled={loading.saving}
                     />
                   </div>
                 </div>
@@ -877,11 +1232,6 @@ const handleQuotationChange = (e) => {
                       <span className="font-medium text-red-600">-{formatCurrency(discountAmount)}</span>
                     </div>
                     
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tax (10%):</span>
-                      <span className="font-medium">{formatCurrency(tax)}</span>
-                    </div>
-                    
                     <div className="flex justify-between border-t pt-3 text-lg font-bold">
                       <span>Total:</span>
                       <span className="text-blue-600">{formatCurrency(total)}</span>
@@ -891,15 +1241,23 @@ const handleQuotationChange = (e) => {
                   <div className="mt-6 space-y-3">
                     <button
                       onClick={handleSave}
-                      className="w-full bg-blue-600 text-white rounded-lg px-4 py-3 hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center"
+                      disabled={loading.saving || !quotation.customerName}
+                      className="w-full bg-blue-600 text-white rounded-lg px-4 py-3 hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
-                      <FaSave className="mr-2" />
-                      Save Quotation
+                      {loading.saving ? (
+                        <>Saving...</>
+                      ) : (
+                        <>
+                          <FaSave className="mr-2" />
+                          Save Quotation
+                        </>
+                      )}
                     </button>
 
                     <button
                       onClick={handlePreview}
-                      className="w-full bg-green-600 text-white rounded-lg px-4 py-3 hover:bg-green-700 transition-colors font-semibold flex items-center justify-center"
+                      disabled={!quotation.customerName || loading.saving}
+                      className="w-full bg-green-600 text-white rounded-lg px-4 py-3 hover:bg-green-700 transition-colors font-semibold flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       <FaEye className="mr-2" />
                       Preview Quotation
@@ -907,7 +1265,8 @@ const handleQuotationChange = (e) => {
                     
                     <button
                       onClick={onClose}
-                      className="w-full bg-gray-500 text-white rounded-lg px-4 py-3 hover:bg-gray-600 transition-colors font-semibold"
+                      disabled={loading.saving}
+                      className="w-full bg-gray-500 text-white rounded-lg px-4 py-3 hover:bg-gray-600 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
@@ -924,14 +1283,25 @@ const handleQuotationChange = (e) => {
         <QuotationPreviewModal 
           isOpen={showPreview} 
           onClose={() => setShowPreview(false)} 
-          quotation={getPreviewQuotation()} 
+          quotation={{
+            ...quotation,
+            quotationNumber: `QTN-${Date.now().toString().slice(-4)}`,
+            bookingNumber: `BK-${new Date().getFullYear()}-${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,
+            date: new Date().toISOString().split('T')[0],
+            servicesTotal: servicesSubtotal,
+            packagesTotal: servicePackagesSubtotal,
+            partsTotal: customPartsSubtotal,
+            subtotal,
+            discountValue: discountAmount,
+            total
+          }} 
         />
       )}
     </>
   );
 }
 
-// QuotationPreviewModal Component (keep your existing code, just ensure it's in the same file)
+// QuotationPreviewModal Component (remains the same)
 function QuotationPreviewModal({ isOpen, onClose, quotation }) {
   if (!isOpen) return null;
 
@@ -967,6 +1337,9 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
               <h2 className="text-xl font-semibold">QUOTATION</h2>
               <p>Quotation #: {quotation?.quotationNumber || "QTN-2502"}</p>
               <p>Booking #: {quotation?.bookingNumber || "BK-2025-558"}</p>
+              {quotation?.bookingId && (
+                <p>Linked Booking ID: {quotation.bookingId}</p>
+              )}
               <p>Date: {quotation?.date || "28/10/2025"}</p>
               <p>Validity: {quotation?.validity || "30"} Days</p>
             </div>
@@ -1012,8 +1385,8 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
                 {quotation?.services?.length ? (
                   quotation.services.map((s, i) => (
                     <tr key={i}>
-                      <td className="border px-2 py-1">{s.name}</td>
-                      <td className="border px-2 py-1">{s.description}</td>
+                      <td className="border px-2 py-1">{s.servicesName}</td>
+                      <td className="border px-2 py-1">{s.servicesDescription}</td>
                       <td className="border px-2 py-1 text-right">₱{s.price}</td>
                     </tr>
                   ))
@@ -1040,12 +1413,12 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
                 </tr>
               </thead>
               <tbody>
-                {quotation?.packages?.length ? (
-                  quotation.packages.map((p, i) => (
+                {quotation?.servicePackages?.length ? (
+                  quotation.servicePackages.map((p, i) => (
                     <tr key={i}>
-                      <td className="border px-2 py-1">{p.name}</td>
-                      <td className="border px-2 py-1">{p.description}</td>
-                      <td className="border px-2 py-1 text-right">₱{p.price}</td>
+                      <td className="border px-2 py-1">{p.packageName}</td>
+                      <td className="border px-2 py-1">{p.packageDescription}</td>
+                      <td className="border px-2 py-1 text-right">₱{p.packagePrice}</td>
                     </tr>
                   ))
                 ) : (
@@ -1073,15 +1446,15 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
                 </tr>
               </thead>
               <tbody>
-                {quotation?.parts?.length ? (
-                  quotation.parts.map((p, i) => (
+                {quotation?.customParts?.length ? (
+                  quotation.customParts.map((p, i) => (
                     <tr key={i}>
-                      <td className="border px-2 py-1">{p.name}</td>
-                      <td className="border px-2 py-1">{p.description}</td>
+                      <td className="border px-2 py-1">{p.partName}</td>
+                      <td className="border px-2 py-1">{p.partDescription}</td>
                       <td className="border px-2 py-1 text-right">₱{p.unitPrice}</td>
-                      <td className="border px-2 py-1 text-right">{p.qty}</td>
+                      <td className="border px-2 py-1 text-right">{p.quantity}</td>
                       <td className="border px-2 py-1 text-right">
-                        ₱{(p.unitPrice * p.qty).toFixed(2)}
+                        ₱{(p.unitPrice * p.quantity).toFixed(2)}
                       </td>
                     </tr>
                   ))
@@ -1136,10 +1509,6 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
                     </td>
                   </tr>
                   <tr>
-                    <td>Tax (10%):</td>
-                    <td className="text-right">₱{quotation?.tax || 0}</td>
-                  </tr>
-                  <tr>
                     <td className="font-semibold text-base">Total:</td>
                     <td className="text-right font-bold text-lg">
                       ₱{quotation?.total || 0}
@@ -1176,5 +1545,3 @@ function QuotationPreviewModal({ isOpen, onClose, quotation }) {
     </div>
   );
 }
-
-
