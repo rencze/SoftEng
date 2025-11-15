@@ -1,15 +1,15 @@
 "use client";
-import { FaUser, FaShieldAlt, FaPalette, FaBook, FaWrench, FaCreditCard, FaCar } from "react-icons/fa";
+import { FaUser, FaShieldAlt, FaPalette, FaBook, FaWrench, FaCreditCard, FaCar, FaFileInvoice } from "react-icons/fa";
 
 export default function CustomerSideBar({ user, activeTab, setActiveTab }) {
   const tabs = [
     { key: "profile", label: "Profile Information", icon: <FaUser /> },
     { key: "security", label: "Security & Password", icon: <FaShieldAlt /> },
-    { key: "preferences", label: "Preferences", icon: <FaPalette /> },
     { key: "myBooking", label: "My Booking", icon: <FaBook /> },
     { key: "myServiceJob", label: "My Service Job", icon: <FaWrench /> },
     { key: "myPayment", label: "My Payment", icon: <FaCreditCard /> },
-    { key: "carProfile", label: "Car Profile", icon: <FaCar /> }
+    { key: "carProfile", label: "Car Profile", icon: <FaCar /> },
+    { key: "quotation", label: "Quotation", icon: <FaFileInvoice /> }
   ];
 
   return (

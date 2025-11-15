@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { FaPlus, FaEdit, FaTrash, FaBoxOpen, FaTimes, FaSearch } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaBoxOpen, FaTimes, FaSearch, FaFileAlt, FaCube } from "react-icons/fa";
 
 const API_URL = "http://localhost:3001/api/service-packages";
 
@@ -15,7 +15,6 @@ export default function ServicesPackagePage() {
   const [packageData, setPackageData] = useState({
     packageName: "",
     packageDescription: "",
-    packagePrice: ""
   });
 
   // Load packages on mount
@@ -36,28 +35,16 @@ export default function ServicesPackagePage() {
           servicePackageId: 1,
           packageName: "Basic Package",
           packageDescription: "Includes aircon cleaning and freon refill.",
-          packagePrice: 2500
         },
         {
           servicePackageId: 2,
           packageName: "Premium Package",
           packageDescription: "Full diagnostics, cleaning, and freon refill.",
-          packagePrice: 4000
         },
       ]);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Format PHP Currency
-  const formatCurrency = (value) => {
-    if (!value) return "₱0.00";
-    return new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-      minimumFractionDigits: 2,
-    }).format(value);
   };
 
   // Open Modal
@@ -67,14 +54,12 @@ export default function ServicesPackagePage() {
       setPackageData({
         packageName: pkg.packageName || "",
         packageDescription: pkg.packageDescription || pkg.description || "",
-        packagePrice: pkg.packagePrice || pkg.price || ""
       });
     } else {
       setEditingPackage(null);
       setPackageData({ 
         packageName: "", 
         packageDescription: "", 
-        packagePrice: "" 
       });
     }
     setIsModalOpen(true);
@@ -87,7 +72,6 @@ export default function ServicesPackagePage() {
       setPackageData({ 
         packageName: "", 
         packageDescription: "", 
-        packagePrice: "" 
       });
     }, 300);
   };
@@ -95,27 +79,15 @@ export default function ServicesPackagePage() {
   // Handle Input
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === "packagePrice") {
-      // Prevent negative numbers
-      if (Number(value) < 0) return;
-    }
-
     setPackageData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Save Package
   const savePackage = async () => {
-    if (Number(packageData.packagePrice) < 0) {
-      alert("Price cannot be negative");
-      return;
-    }
-
     try {
       const payload = {
         packageName: packageData.packageName,
         packageDescription: packageData.packageDescription,
-        packagePrice: Number(packageData.packagePrice)
       };
 
       if (editingPackage) {
@@ -155,212 +127,200 @@ export default function ServicesPackagePage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Service Packages</h1>
-          <p className="text-gray-600">Manage bundled service packages</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Service Packages</h1>
+          <p className="text-gray-600 flex items-center">
+            <FaBoxOpen className="mr-2" />
+            {filteredPackages.length} of {packages.length} packages
+          </p>
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition"
+          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg font-medium"
         >
           <FaPlus className="mr-2" /> Add Package
         </button>
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-xl border p-4 mb-6 flex flex-wrap gap-4 shadow-sm">
-        <div className="relative flex-1">
-          <FaSearch className="absolute left-3 top-3 text-gray-400" />
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="relative max-w-md">
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search packages..."
+            placeholder="Search packages by name or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border rounded-lg pl-10 pr-3 py-2 w-full focus:ring-2 focus:ring-blue-500 outline-none"
+            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
-        <button
-          onClick={() => setSearch("")}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-        >
-          Clear
-        </button>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
           <div className="animate-pulse text-gray-500">Loading packages...</div>
         </div>
       )}
 
       {/* Table */}
       {!isLoading && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Package Name</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Description</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Price</th>
-                <th className="px-6 py-3 text-left font-medium text-gray-600 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredPackages.length > 0 ? (
-                filteredPackages.map((pkg) => (
-                  <tr key={pkg.servicePackageId || pkg.packageId} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 flex items-center gap-2 font-semibold text-gray-800">
-                      <FaBoxOpen className="text-purple-500" /> {pkg.packageName}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {pkg.packageDescription || pkg.description}
-                    </td>
-                    <td className="px-6 py-4 text-green-600 font-medium">
-                      {formatCurrency(pkg.packagePrice || pkg.price)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-3">
-                        <button
-                          onClick={() => openModal(pkg)}
-                          className="text-blue-600 hover:text-blue-800 transition p-1 rounded-full hover:bg-blue-50"
-                          title="Edit package"
-                        >
-                          <FaEdit />
-                        </button>
-                    {false && (    <button
-                          onClick={() => deletePackage(pkg)}
-                          className="text-red-600 hover:text-red-800 transition p-1 rounded-full hover:bg-red-50"
-                          title="Delete package"
-                        >
-                          <FaTrash />
-                        </button>
-                        )}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Package Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredPackages.length > 0 ? (
+                  filteredPackages.map((pkg) => (
+                    <tr key={pkg.servicePackageId || pkg.packageId} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <FaBoxOpen className="text-blue-500 mr-3" />
+                          <span className="font-medium text-gray-800">
+                            {pkg.packageName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {pkg.packageDescription || pkg.description || "No description provided"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => openModal(pkg)}
+                            className="text-blue-600 hover:text-blue-800 p-2 transition-colors rounded-lg hover:bg-blue-50"
+                            title="Edit Package"
+                          >
+                            <FaEdit size={16} />
+                          </button>
+                          {false && (
+                            <button
+                              onClick={() => deletePackage(pkg)}
+                              className="text-red-600 hover:text-red-800 p-2 transition-colors rounded-lg hover:bg-red-50"
+                              title="Delete Package"
+                            >
+                              <FaTrash size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="text-center py-12">
+                      <div className="flex flex-col items-center">
+                        <FaBoxOpen className="h-12 w-12 text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No packages found</h3>
+                        <p className="text-gray-500">
+                          {search ? "Try adjusting your search criteria" : "Get started by adding your first package"}
+                        </p>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="text-center py-12 text-gray-500">
-                    {search ? "No packages match your search" : "No packages found"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Modal */}
+      {/* Improved Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                {editingPackage ? "Edit Package" : "Add Package"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-              >
-                <FaTimes />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-blue-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">
+                  {editingPackage ? "Edit Package" : "Create New Package"}
+                </h2>
+                <button
+                  onClick={closeModal}
+                  className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-xl" />
+                </button>
+              </div>
+              <p className="text-blue-100 mt-2">
+                {editingPackage 
+                  ? "Update package information" 
+                  : "Bundle services together for special offers"
+                }
+              </p>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Package Name
-                </label>
-                <input
-                  type="text"
-                  name="packageName"
-                  placeholder="e.g., Premium Maintenance"
-                  value={packageData.packageName}
-                  onChange={handleChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="packageDescription"
-                  placeholder="Describe what this package includes..."
-                  value={packageData.packageDescription}
-                  onChange={handleChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                  rows="2"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (₱)
-                </label>
+
+            {/* Form */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-6">
+                {/* Package Name */}
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                    <FaCube className="mr-2 text-blue-600" />
+                    Package Name *
+                  </label>
                   <input
-                    type="number"
-                    name="packagePrice"
-                    placeholder="0.00"
-                    value={packageData.packagePrice}
+                    type="text"
+                    name="packageName"
+                    value={packageData.packageName}
                     onChange={handleChange}
-                    onKeyDown={(e) => {
-                      // Block "-" and "e"
-                      if (e.key === "-" || e.key === "e") e.preventDefault();
-                    }}
-                    onPaste={(e) => {
-                      const paste = e.clipboardData.getData("text");
-                      // Only allow digits and at most one dot
-                      const validPattern = /^\d*\.?\d*$/;
-                      if (!validPattern.test(paste)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                    min="0"
-                    step="0.01"
+                    placeholder="Enter package name"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    required
                   />
+                </div>
 
-
-
-                {/* <input
-                  type="number"
-                  name="packagePrice"
-                  placeholder="0.00"
-                  value={packageData.packagePrice}
-                  onChange={handleChange}
-                  onKeyDown={(e) => {
-                    // Block "-" and "e"
-                    if (e.key === "-" || e.key === "e") e.preventDefault();
-                  }}
-                  onPaste={(e) => {
-                    const paste = e.clipboardData.getData("text");
-                    if (Number(paste) < 0) e.preventDefault();
-                  }}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                  min="0"
-                  step="0.01"
-                /> */}
+                {/* Description */}
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                    <FaFileAlt className="mr-2 text-blue-600" />
+                    Description
+                  </label>
+                  <textarea
+                    name="packageDescription"
+                    value={packageData.packageDescription}
+                    onChange={handleChange}
+                    placeholder="Describe what services are included in this package, pricing, and any special features..."
+                    rows="4"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Clear descriptions help customers understand the value of your package
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={savePackage}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
-              >
-                {editingPackage ? "Update" : "Create"} Package
-              </button>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                <button
+                  onClick={closeModal}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={savePackage}
+                  disabled={!packageData.packageName}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {editingPackage ? "Update Package" : "Create Package"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

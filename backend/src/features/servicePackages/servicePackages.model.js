@@ -17,22 +17,22 @@ async function getPackageByIdModel(id) {
 
 // Create package
 async function createPackageModel(data) {
-  const { packageName, packageDescription, packagePrice } = data;
+  const { packageName, packageDescription } = data;
   const [result] = await pool.query(
-    "INSERT INTO service_packages (packageName, packageDescription, packagePrice) VALUES (?, ?, ?)",
-    [packageName, packageDescription, packagePrice]
+    "INSERT INTO service_packages (packageName, packageDescription) VALUES (?, ?)",
+    [packageName, packageDescription]
   );
   return { id: result.insertId, ...data };
 }
 
 // Update package
 async function updatePackageModel(id, data) {
-  const { packageName, packageDescription, packagePrice } = data;
+  const { packageName, packageDescription } = data;
   const [result] = await pool.query(
     `UPDATE service_packages
-     SET packageName = ?, packageDescription = ?, packagePrice = ?
+     SET packageName = ?, packageDescription = ?
      WHERE servicePackageId = ?`,
-    [packageName, packageDescription, packagePrice, id]
+    [packageName, packageDescription, id]
   );
   return result;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import moment from "moment";
-import { FaSort } from "react-icons/fa";
+import { FaSort, FaCheck, FaTimes, FaUserTimes, FaCalendarPlus } from "react-icons/fa";
 
 const BookingsTable = ({
   bookings,
@@ -145,9 +145,10 @@ const ActionButtons = ({ booking, onAccept, onCancel, onReschedule, onComplete, 
       {["Incoming", "Pending"].includes(booking.statusName) && (
         <button
           onClick={() => onAccept(booking)}
-          className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs transition"
+          className="flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm space-x-1"
         >
-          Accept
+          <FaCheck className="text-xs" />
+          <span>Accept</span>
         </button>
       )}
       
@@ -155,9 +156,10 @@ const ActionButtons = ({ booking, onAccept, onCancel, onReschedule, onComplete, 
       {["Accepted", "Confirmed"].includes(booking.statusName) && (
         <button
           onClick={() => onComplete(booking)}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs transition"
+          className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
         >
-          Complete
+          <FaCheck className="text-xs" />
+          <span>Complete</span>
         </button>
       )}
       
@@ -165,9 +167,10 @@ const ActionButtons = ({ booking, onAccept, onCancel, onReschedule, onComplete, 
       {["Accepted", "Confirmed"].includes(booking.statusName) && (
         <button
           onClick={() => onNoShow(booking)}
-          className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-xs transition"
+          className="flex items-center px-3 py-1 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700 transition-colors shadow-sm space-x-1"
         >
-          No-Show
+          <FaUserTimes className="text-xs" />
+          <span>No-Show</span>
         </button>
       )}
       
@@ -176,16 +179,18 @@ const ActionButtons = ({ booking, onAccept, onCancel, onReschedule, onComplete, 
         <>
           <button
             onClick={() => onReschedule(booking)}
-            className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs transition"
+            className="flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors shadow-sm space-x-1"
           >
-            Reschedule
+            <FaCalendarPlus className="text-xs" />
+            <span>Reschedule</span>
           </button>
           
           <button
             onClick={() => onCancel(booking)}
-            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
           >
-            Cancel
+            <FaTimes className="text-xs" />
+            <span>Cancel</span>
           </button>
         </>
       )}

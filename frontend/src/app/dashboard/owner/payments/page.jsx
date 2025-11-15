@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FaSearch, FaFilter, FaDownload, FaEye, FaReceipt, FaCreditCard, FaMoneyBillWave, FaWallet, FaCalendar, FaExchangeAlt, FaPlus } from "react-icons/fa";
+import { FaSearch, FaFilter, FaDownload, FaEye, FaReceipt, FaCreditCard, FaMoneyBillWave, FaWallet, FaCalendar, FaExchangeAlt, FaPlus, FaFileInvoice, FaQuoteLeft } from "react-icons/fa";
 
 export default function PaymentHistoryPage() {
   const [payments, setPayments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -14,58 +16,140 @@ export default function PaymentHistoryPage() {
   });
   const [activeTable, setActiveTable] = useState("payments");
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showAddInvoice, setShowAddInvoice] = useState(false);
+  const [showAddQuotation, setShowAddQuotation] = useState(false);
 
-  // Sample payments data
+  // Sample data
   useEffect(() => {
+    // Sample quotations data
+    const sampleQuotations = [
+      {
+        id: 1001,
+        quotationNumber: "QT-001234",
+        clientName: "John Smith",
+        clientEmail: "john.smith@email.com",
+        clientPhone: "+1 (555) 123-4567",
+        items: [
+          { description: "Website Development", quantity: 1, rate: 3000, amount: 3000 },
+          { description: "SEO Setup", quantity: 1, rate: 500, amount: 500 },
+          { description: "Content Creation", quantity: 5, rate: 100, amount: 500 }
+        ],
+        subtotal: 4000,
+        tax: 400,
+        discount: 200,
+        total: 4200,
+        status: "approved", // draft, sent, approved, rejected
+        validUntil: "2024-02-15",
+        createdAt: "2024-01-10",
+        notes: "Includes 3 rounds of revisions"
+      },
+      {
+        id: 1002,
+        quotationNumber: "QT-001235",
+        clientName: "Sarah Johnson",
+        clientEmail: "sarah.j@email.com",
+        clientPhone: "+1 (555) 987-6543",
+        items: [
+          { description: "Mobile App Development", quantity: 1, rate: 5000, amount: 5000 },
+          { description: "API Integration", quantity: 2, rate: 750, amount: 1500 }
+        ],
+        subtotal: 6500,
+        tax: 650,
+        discount: 0,
+        total: 7150,
+        status: "sent",
+        validUntil: "2024-02-20",
+        createdAt: "2024-01-12",
+        notes: "6 months support included"
+      }
+    ];
+
+    // Sample invoices data
+    const sampleInvoices = [
+      {
+        id: 2001,
+        invoiceNumber: "INV-001234",
+        quotationId: 1001,
+        quotationNumber: "QT-001234",
+        clientName: "John Smith",
+        clientEmail: "john.smith@email.com",
+        clientPhone: "+1 (555) 123-4567",
+        items: [
+          { description: "Website Development", quantity: 1, rate: 3000, amount: 3000 },
+          { description: "SEO Setup", quantity: 1, rate: 500, amount: 500 },
+          { description: "Content Creation", quantity: 5, rate: 100, amount: 500 }
+        ],
+        subtotal: 4000,
+        tax: 400,
+        discount: 200,
+        total: 4200,
+        amountDue: 4200,
+        amountPaid: 0,
+        status: "unpaid", // unpaid, partial, paid, overdue
+        issueDate: "2024-01-15",
+        dueDate: "2024-02-15",
+        paymentTerms: "Net 30",
+        notes: "Thank you for your business!"
+      },
+      {
+        id: 2002,
+        invoiceNumber: "INV-001235",
+        quotationId: 1002,
+        quotationNumber: "QT-001235",
+        clientName: "Sarah Johnson",
+        clientEmail: "sarah.j@email.com",
+        clientPhone: "+1 (555) 987-6543",
+        items: [
+          { description: "Mobile App Development", quantity: 1, rate: 5000, amount: 5000 },
+          { description: "API Integration", quantity: 2, rate: 750, amount: 1500 }
+        ],
+        subtotal: 6500,
+        tax: 650,
+        discount: 0,
+        total: 7150,
+        amountDue: 3650,
+        amountPaid: 3500,
+        status: "partial",
+        issueDate: "2024-01-14",
+        dueDate: "2024-02-14",
+        paymentTerms: "50% advance, 50% on delivery",
+        notes: "Advance payment received"
+      }
+    ];
+
+    // Sample payments data
     const samplePayments = [
       {
         id: 1,
+        invoiceId: 2001,
+        invoiceNumber: "INV-001234",
         clientName: "John Smith",
         amount: 450.00,
         paymentMethod: "credit",
         status: "completed",
         date: "2024-01-15",
-        invoiceNumber: "INV-001234",
         type: "payment"
       },
       {
         id: 2,
+        invoiceId: 2002,
+        invoiceNumber: "INV-001235",
         clientName: "Sarah Johnson",
         amount: 289.50,
         paymentMethod: "bank",
         status: "completed",
         date: "2024-01-14",
-        invoiceNumber: "INV-001235",
         type: "payment"
       },
       {
         id: 3,
+        invoiceId: 2002,
+        invoiceNumber: "INV-001235",
         clientName: "Mike Wilson",
         amount: 125.75,
         paymentMethod: "cash",
         status: "pending",
         date: "2024-01-14",
-        invoiceNumber: "INV-001236",
-        type: "payment"
-      },
-      {
-        id: 4,
-        clientName: "Emily Davis",
-        amount: 567.25,
-        paymentMethod: "credit",
-        status: "completed",
-        date: "2024-01-13",
-        invoiceNumber: "INV-001237",
-        type: "payment"
-      },
-      {
-        id: 5,
-        clientName: "Robert Brown",
-        amount: 89.99,
-        paymentMethod: "debit",
-        status: "failed",
-        date: "2024-01-12",
-        invoiceNumber: "INV-001238",
         type: "payment"
       }
     ];
@@ -74,6 +158,8 @@ export default function PaymentHistoryPage() {
     const sampleHistory = [
       {
         id: 101,
+        invoiceId: 2001,
+        invoiceNumber: "INV-001234",
         clientName: "John Smith",
         amount: 150.00,
         type: "refund",
@@ -84,6 +170,8 @@ export default function PaymentHistoryPage() {
       },
       {
         id: 102,
+        invoiceId: 2002,
+        invoiceNumber: "INV-001235",
         clientName: "Lisa Anderson",
         amount: -75.50,
         type: "adjustment",
@@ -91,39 +179,12 @@ export default function PaymentHistoryPage() {
         date: "2024-01-15",
         referenceNumber: "ADJ-001235",
         description: "Price adjustment"
-      },
-      {
-        id: 103,
-        clientName: "Sarah Johnson",
-        amount: 50.00,
-        type: "partial_payment",
-        status: "completed",
-        date: "2024-01-14",
-        referenceNumber: "PP-001236",
-        description: "Partial payment for invoice"
-      },
-      {
-        id: 104,
-        clientName: "Mike Wilson",
-        amount: -25.00,
-        type: "discount",
-        status: "completed",
-        date: "2024-01-13",
-        referenceNumber: "DISC-001237",
-        description: "Loyalty discount applied"
-      },
-      {
-        id: 105,
-        clientName: "Tech Corp Inc",
-        amount: 1200.00,
-        type: "bulk_payment",
-        status: "pending",
-        date: "2024-01-12",
-        referenceNumber: "BULK-001238",
-        description: "Corporate bulk service payment"
       }
     ];
 
+    setQuotations(sampleQuotations);
+    setInvoices(sampleInvoices);
+    
     // Combine both datasets
     const allData = [...samplePayments, ...sampleHistory];
     setPayments(allData);
@@ -167,7 +228,15 @@ export default function PaymentHistoryPage() {
     const statusConfig = {
       completed: { color: "bg-green-100 text-green-800", label: "Completed" },
       pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-      failed: { color: "bg-red-100 text-red-800", label: "Failed" }
+      failed: { color: "bg-red-100 text-red-800", label: "Failed" },
+      unpaid: { color: "bg-red-100 text-red-800", label: "Unpaid" },
+      partial: { color: "bg-blue-100 text-blue-800", label: "Partial" },
+      paid: { color: "bg-green-100 text-green-800", label: "Paid" },
+      overdue: { color: "bg-red-100 text-red-800", label: "Overdue" },
+      draft: { color: "bg-gray-100 text-gray-800", label: "Draft" },
+      sent: { color: "bg-blue-100 text-blue-800", label: "Sent" },
+      approved: { color: "bg-green-100 text-green-800", label: "Approved" },
+      rejected: { color: "bg-red-100 text-red-800", label: "Rejected" }
     };
     const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
     return (
@@ -278,14 +347,34 @@ export default function PaymentHistoryPage() {
     </button>
   );
 
+  const AddInvoiceButton = () => (
+    <button
+      onClick={() => setShowAddInvoice(true)}
+      className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
+    >
+      <FaFileInvoice className="mr-2" />
+      Create Invoice
+    </button>
+  );
+
+  const AddQuotationButton = () => (
+    <button
+      onClick={() => setShowAddQuotation(true)}
+      className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition"
+    >
+      <FaQuoteLeft className="mr-2" />
+      Create Quotation
+    </button>
+  );
+
   // Add Payment Modal
   const AddPaymentModal = () => {
     const [formData, setFormData] = useState({
+      invoiceId: "",
       clientName: "",
       amount: "",
       paymentMethod: "credit",
       date: new Date().toISOString().split('T')[0],
-      invoiceNumber: "",
       notes: ""
     });
 
@@ -293,15 +382,34 @@ export default function PaymentHistoryPage() {
       e.preventDefault();
       // Here you would typically send the data to your API
       console.log("Adding payment:", formData);
+      
+      // Update invoice amount paid and status
+      if (formData.invoiceId) {
+        const invoice = invoices.find(inv => inv.id === parseInt(formData.invoiceId));
+        if (invoice) {
+          const newAmountPaid = invoice.amountPaid + parseFloat(formData.amount);
+          const newAmountDue = invoice.total - newAmountPaid;
+          const newStatus = newAmountDue <= 0 ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
+          
+          // Update invoice (in real app, this would be an API call)
+          const updatedInvoices = invoices.map(inv => 
+            inv.id === parseInt(formData.invoiceId) 
+              ? { ...inv, amountPaid: newAmountPaid, amountDue: newAmountDue, status: newStatus }
+              : inv
+          );
+          setInvoices(updatedInvoices);
+        }
+      }
+      
       alert("Payment added successfully!");
       setShowAddPayment(false);
       // Reset form
       setFormData({
+        invoiceId: "",
         clientName: "",
         amount: "",
         paymentMethod: "credit",
         date: new Date().toISOString().split('T')[0],
-        invoiceNumber: "",
         notes: ""
       });
     };
@@ -329,6 +437,25 @@ export default function PaymentHistoryPage() {
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Invoice
+              </label>
+              <select
+                name="invoiceId"
+                value={formData.invoiceId}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Invoice</option>
+                {invoices.filter(inv => inv.status !== 'paid').map(invoice => (
+                  <option key={invoice.id} value={invoice.id}>
+                    {invoice.invoiceNumber} - {invoice.clientName} - ${invoice.amountDue} due
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Client Name
@@ -394,20 +521,6 @@ export default function PaymentHistoryPage() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Invoice Number
-              </label>
-              <input
-                type="text"
-                name="invoiceNumber"
-                value={formData.invoiceNumber}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="INV-001"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notes
               </label>
               <textarea
@@ -441,6 +554,363 @@ export default function PaymentHistoryPage() {
     );
   };
 
+  // Add Invoice Modal
+  const AddInvoiceModal = () => {
+    const [formData, setFormData] = useState({
+      quotationId: "",
+      clientName: "",
+      clientEmail: "",
+      clientPhone: "",
+      items: [{ description: "", quantity: 1, rate: 0, amount: 0 }],
+      subtotal: 0,
+      tax: 0,
+      discount: 0,
+      total: 0,
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      paymentTerms: "Net 30",
+      notes: ""
+    });
+
+    const calculateTotals = (items, tax, discount) => {
+      const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+      const total = subtotal + tax - discount;
+      return { subtotal, total };
+    };
+
+    const handleItemChange = (index, field, value) => {
+      const updatedItems = [...formData.items];
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+      
+      if (field === 'quantity' || field === 'rate') {
+        const quantity = field === 'quantity' ? parseFloat(value) : updatedItems[index].quantity;
+        const rate = field === 'rate' ? parseFloat(value) : updatedItems[index].rate;
+        updatedItems[index].amount = quantity * rate;
+      }
+      
+      const { subtotal, total } = calculateTotals(updatedItems, formData.tax, formData.discount);
+      setFormData(prev => ({ ...prev, items: updatedItems, subtotal, total }));
+    };
+
+    const addItem = () => {
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, { description: "", quantity: 1, rate: 0, amount: 0 }]
+      }));
+    };
+
+    const removeItem = (index) => {
+      if (formData.items.length > 1) {
+        const updatedItems = formData.items.filter((_, i) => i !== index);
+        const { subtotal, total } = calculateTotals(updatedItems, formData.tax, formData.discount);
+        setFormData(prev => ({ ...prev, items: updatedItems, subtotal, total }));
+      }
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      // Generate invoice number
+      const invoiceNumber = `INV-${String(invoices.length + 1).padStart(6, '0')}`;
+      
+      const newInvoice = {
+        id: invoices.length + 2001,
+        invoiceNumber,
+        quotationId: formData.quotationId || null,
+        quotationNumber: formData.quotationId ? quotations.find(q => q.id === parseInt(formData.quotationId))?.quotationNumber : null,
+        ...formData,
+        amountDue: formData.total,
+        amountPaid: 0,
+        status: 'unpaid'
+      };
+      
+      setInvoices(prev => [...prev, newInvoice]);
+      alert("Invoice created successfully!");
+      setShowAddInvoice(false);
+    };
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      if (name === 'tax' || name === 'discount') {
+        const { subtotal, total } = calculateTotals(formData.items, 
+          name === 'tax' ? parseFloat(value) : formData.tax,
+          name === 'discount' ? parseFloat(value) : formData.discount
+        );
+        setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0, subtotal, total }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
+    };
+
+    if (!showAddInvoice) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-gray-800">Create New Invoice</h3>
+            <button
+              onClick={() => setShowAddInvoice(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quotation
+                </label>
+                <select
+                  name="quotationId"
+                  value={formData.quotationId}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Select Quotation (Optional)</option>
+                  {quotations.filter(q => q.status === 'approved').map(quotation => (
+                    <option key={quotation.id} value={quotation.id}>
+                      {quotation.quotationNumber} - {quotation.clientName} - ${quotation.total}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Terms
+                </label>
+                <select
+                  name="paymentTerms"
+                  value={formData.paymentTerms}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="Due on receipt">Due on receipt</option>
+                  <option value="Net 7">Net 7</option>
+                  <option value="Net 15">Net 15</option>
+                  <option value="Net 30">Net 30</option>
+                  <option value="Net 60">Net 60</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  name="clientName"
+                  value={formData.clientName}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter client name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Email
+                </label>
+                <input
+                  type="email"
+                  name="clientEmail"
+                  value={formData.clientEmail}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="client@email.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Phone
+                </label>
+                <input
+                  type="tel"
+                  name="clientPhone"
+                  value={formData.clientPhone}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Issue Date
+                </label>
+                <input
+                  type="date"
+                  name="issueDate"
+                  value={formData.issueDate}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  name="dueDate"
+                  value={formData.dueDate}
+                  onChange={handleChange}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Invoice Items */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">Items</label>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >
+                  Add Item
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {formData.items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-5">
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        placeholder="Item description"
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                        min="1"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        value={item.rate}
+                        onChange={(e) => handleItemChange(index, 'rate', parseFloat(e.target.value))}
+                        step="0.01"
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        value={item.amount}
+                        readOnly
+                        className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      {formData.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Totals */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>${formData.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax:</span>
+                  <input
+                    type="number"
+                    name="tax"
+                    value={formData.tax}
+                    onChange={handleChange}
+                    step="0.01"
+                    className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <span>Discount:</span>
+                  <input
+                    type="number"
+                    name="discount"
+                    value={formData.discount}
+                    onChange={handleChange}
+                    step="0.01"
+                    className="w-24 border border-gray-300 rounded px-2 py-1 text-sm"
+                  />
+                </div>
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <span>Total:</span>
+                  <span>${formData.total.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Additional notes..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAddInvoice(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                Create Invoice
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -451,8 +921,9 @@ export default function PaymentHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* Add Payment Modal */}
+      {/* Modals */}
       <AddPaymentModal />
+      <AddInvoiceModal />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -467,6 +938,8 @@ export default function PaymentHistoryPage() {
           </p>
         </div>
         <div className="flex gap-3">
+          <AddQuotationButton />
+          <AddInvoiceButton />
           <AddPaymentButton />
           <TableToggleButton />
           <button

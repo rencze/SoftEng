@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState } from "react";
 import moment from "moment";
-import { FaSort, FaInfoCircle, FaTools, FaBox, FaEye } from "react-icons/fa";
+import { FaSort, FaInfoCircle, FaTools, FaBox, FaEye, FaCheck, FaTimes, FaCalendarPlus, FaFileInvoiceDollar } from "react-icons/fa";
 
 const ServiceRequestsTable = ({
   serviceRequests,
@@ -251,10 +250,10 @@ const ServiceRequestActionButtons = ({
       {/* View button for all statuses */}
       <button
         onClick={() => handleView(serviceRequest)}
-        className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-xs transition flex items-center"
+        className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
       >
-        <FaEye className="mr-1" />
-        View
+        <FaEye className="text-xs" />
+        <span>View</span>
       </button>
 
       {/* Pending: Can Accept, Review, or Cancel */}
@@ -262,21 +261,24 @@ const ServiceRequestActionButtons = ({
         <>
           <button
             onClick={() => onAccept(serviceRequest)}
-            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm space-x-1"
           >
-            Accept
+            <FaCheck className="text-xs" />
+            <span>Accept</span>
           </button>
           <button
             onClick={() => onReview(serviceRequest)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
           >
-            Review
+            <FaEye className="text-xs" />
+            <span>Review</span>
           </button>
           <button
             onClick={() => onCancel(serviceRequest)}
-            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
           >
-            Cancel
+            <FaTimes className="text-xs" />
+            <span>Cancel</span>
           </button>
         </>
       )}
@@ -286,21 +288,24 @@ const ServiceRequestActionButtons = ({
         <>
           <button
             onClick={() => onConvert(serviceRequest)}
-            className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm space-x-1"
           >
-            Convert to Booking
+            <FaFileInvoiceDollar className="text-xs" />
+            <span>Convert</span>
           </button>
           <button
             onClick={() => onReschedule(serviceRequest)}
-            className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs transition"
+            className="flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors shadow-sm space-x-1"
           >
-            Reschedule
+            <FaCalendarPlus className="text-xs" />
+            <span>Reschedule</span>
           </button>
           <button
             onClick={() => onCancel(serviceRequest)}
-            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
           >
-            Cancel
+            <FaTimes className="text-xs" />
+            <span>Cancel</span>
           </button>
         </>
       )}
@@ -310,21 +315,24 @@ const ServiceRequestActionButtons = ({
         <>
           <button
             onClick={() => onConvert(serviceRequest)}
-            className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm space-x-1"
           >
-            Convert to Booking
+            <FaFileInvoiceDollar className="text-xs" />
+            <span>Convert</span>
           </button>
           <button
             onClick={() => onReschedule(serviceRequest)}
-            className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs transition"
+            className="flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors shadow-sm space-x-1"
           >
-            Reschedule
+            <FaCalendarPlus className="text-xs" />
+            <span>Reschedule</span>
           </button>
           <button
             onClick={() => onCancel(serviceRequest)}
-            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition"
+            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
           >
-            Cancel
+            <FaTimes className="text-xs" />
+            <span>Cancel</span>
           </button>
         </>
       )}
@@ -333,9 +341,10 @@ const ServiceRequestActionButtons = ({
       {serviceRequest.status === "Rescheduled" && (
         <button
           onClick={() => onCancel(serviceRequest)}
-          className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition"
+          className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
         >
-          Cancel
+          <FaTimes className="text-xs" />
+          <span>Cancel</span>
         </button>
       )}
     </div>

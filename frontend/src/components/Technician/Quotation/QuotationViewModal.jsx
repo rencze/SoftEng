@@ -1,35 +1,67 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 
-export default function QuotationModal({ isOpen, onClose, quotation }) {
+const API_BASE = "http://localhost:3001";
+
+export default function QuotationViewModal({ isOpen, onClose, quotation }) {
+  const [fullQuotation, setFullQuotation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const pdfRef = useRef();
+
+  // Fetch complete quotation data when modal opens
+  useEffect(() => {
+    if (isOpen && quotation) {
+      fetchFullQuotation();
+    }
+  }, [isOpen, quotation]);
+
+  const fetchFullQuotation = async () => {
+    if (!quotation?.quotationId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/quotations/${quotation.quotationId}`);
+      if (!response.ok) throw new Error("Failed to fetch quotation details");
+      const data = await response.json();
+      setFullQuotation(data);
+    } catch (error) {
+      console.error("Error fetching quotation details:", error);
+      // Fallback to the basic quotation data
+      setFullQuotation(quotation);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const pdfRef = useRef();
+  // Use fullQuotation if available, otherwise fallback to basic quotation
+  const displayQuotation = fullQuotation || quotation;
 
   // Calculate totals based on the actual quotation data structure
   const servicesSubtotal =
-    quotation?.services?.reduce((sum, service) => {
+    displayQuotation?.services?.reduce((sum, service) => {
       const quantity = service.quantity || 1;
       return sum + (service.price || 0) * quantity;
     }, 0) || 0;
 
   const servicePackagesSubtotal =
-    quotation?.servicePackages?.reduce((sum, pkg) => {
+    displayQuotation?.servicePackages?.reduce((sum, pkg) => {
       const quantity = pkg.quantity || 1;
       return sum + (pkg.price || 0) * quantity;
     }, 0) || 0;
 
   const customPartsSubtotal =
-    quotation?.customParts?.reduce((sum, part) => {
+    displayQuotation?.customParts?.reduce((sum, part) => {
       const quantity = part.quantity || 1;
       const unitPrice = part.unitPrice || 0;
       return sum + quantity * unitPrice;
     }, 0) || 0;
 
-  const laborCost = quotation?.laborCost || 0;
-  const discount = quotation?.discount || 0;
+  const laborCost = displayQuotation?.laborCost || 0;
+  const discount = displayQuotation?.discount || 0;
 
   const subtotal =
     servicesSubtotal +
@@ -42,15 +74,13 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
 
   const handlePrint = () => window.print();
 
-  // -------------------------
-  // EXPORT TO PDF FUNCTION
-  // -------------------------
+  // Export to PDF function
   const handleExportPDF = () => {
     const element = pdfRef.current;
 
     const options = {
       margin: 0.5,
-      filename: `quotation-${quotation?.quotationId || "document"}.pdf`,
+      filename: `quotation-${displayQuotation?.quotationId || "document"}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
@@ -58,6 +88,34 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
 
     html2pdf().set(options).from(element).save();
   };
+
+  // Helper functions for customer data
+  const getCustomerName = (quotation) => {
+    return quotation?.guestName || quotation?.customerName || quotation?.displayName || 'Unknown Customer';
+  };
+
+  const getCustomerEmail = (quotation) => {
+    return quotation?.guestEmail || quotation?.email || quotation?.displayEmail || 'N/A';
+  };
+
+  const getCustomerPhone = (quotation) => {
+    return quotation?.guestContact || quotation?.phone || quotation?.displayContact || 'N/A';
+  };
+
+  const getCustomerAddress = (quotation) => {
+    return quotation?.address || 'No address provided';
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="bg-white rounded-lg p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading quotation details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -89,12 +147,11 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
             </div>
             <div className="text-right text-sm">
               <h2 className="text-xl font-semibold">QUOTATION</h2>
-              <p>Date: {new Date().toLocaleDateString()}</p>
-              <p>Validity: {quotation?.validity || "30"} Days</p>
-              <p>Status: {quotation.status}</p>
-              {/* UPDATED: Booking Reference in required format */}
-              {quotation?.bookingId && (
-                <p className="font-semibold text-blue-600">Refence: BK-00{quotation.bookingId || ""}</p>
+              <p>Date: {new Date(displayQuotation?.createdAt || Date.now()).toLocaleDateString()}</p>
+              <p>Validity: {displayQuotation?.validity || "30"} Days</p>
+              <p>Status: {displayQuotation?.status || "Unknown"}</p>
+              {displayQuotation?.bookingId && (
+                <p className="font-semibold text-blue-600">Reference: BK-00{displayQuotation.bookingId}</p>
               )}
             </div>
           </div>
@@ -106,26 +163,24 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
               <tbody>
                 <tr>
                   <td className="font-medium w-1/3">Name:</td>
-                  <td>{quotation?.customerName || "John Doe"}</td>
+                  <td>{getCustomerName(displayQuotation)}</td>
                 </tr>
                 <tr>
                   <td className="font-medium">Email:</td>
-                  <td>{quotation?.email || "john@example.com"}</td>
+                  <td>{getCustomerEmail(displayQuotation)}</td>
                 </tr>
                 <tr>
                   <td className="font-medium">Phone:</td>
-                  <td>{quotation?.phone || "+1 (555) 123-4567"}</td>
+                  <td>{getCustomerPhone(displayQuotation)}</td>
                 </tr>
                 <tr>
                   <td className="font-medium">Address:</td>
-                  <td>{quotation?.address || "Enter customer address"}</td>
+                  <td>{getCustomerAddress(displayQuotation)}</td>
                 </tr>
-                {/* REMOVED: Booking Reference from customer details */}
               </tbody>
             </table>
           </div>
 
-          {/* Rest of your existing content remains the same */}
           {/* Services */}
           <div className="mb-6">
             <h3 className="font-semibold mb-2">Services</h3>
@@ -140,13 +195,13 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
                 </tr>
               </thead>
               <tbody>
-                {quotation?.services?.length ? (
-                  quotation.services.map((service, index) => {
+                {displayQuotation?.services?.length ? (
+                  displayQuotation.services.map((service, index) => {
                     const total = (service.price || 0) * (service.quantity || 1);
                     return (
                       <tr key={index}>
-                        <td className="border px-2 py-1">{service.serviceName}</td>
-                        <td className="border px-2 py-1">{service.serviceDescription}</td>
+                        <td className="border px-2 py-1">{service.serviceName || service.servicesName || 'Unknown Service'}</td>
+                        <td className="border px-2 py-1">{service.serviceDescription || service.servicesDescription || 'No description'}</td>
                         <td className="border px-2 py-1 text-right">{service.quantity || 1}</td>
                         <td className="border px-2 py-1 text-right">₱{(service.price || 0).toFixed(2)}</td>
                         <td className="border px-2 py-1 text-right">₱{total.toFixed(2)}</td>
@@ -178,13 +233,13 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
                 </tr>
               </thead>
               <tbody>
-                {quotation?.servicePackages?.length ? (
-                  quotation.servicePackages.map((pkg, index) => {
+                {displayQuotation?.servicePackages?.length ? (
+                  displayQuotation.servicePackages.map((pkg, index) => {
                     const total = (pkg.price || 0) * (pkg.quantity || 1);
                     return (
                       <tr key={index}>
-                        <td className="border px-2 py-1">{pkg.packageName}</td>
-                        <td className="border px-2 py-1">{pkg.packageDescription}</td>
+                        <td className="border px-2 py-1">{pkg.packageName || 'Unknown Package'}</td>
+                        <td className="border px-2 py-1">{pkg.packageDescription || 'No description'}</td>
                         <td className="border px-2 py-1 text-right">{pkg.quantity || 1}</td>
                         <td className="border px-2 py-1 text-right">₱{(pkg.price || 0).toFixed(2)}</td>
                         <td className="border px-2 py-1 text-right">₱{total.toFixed(2)}</td>
@@ -216,14 +271,14 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
                 </tr>
               </thead>
               <tbody>
-                {quotation?.customParts?.length ? (
-                  quotation.customParts.map((part, index) => {
+                {displayQuotation?.customParts?.length ? (
+                  displayQuotation.customParts.map((part, index) => {
                     const total = (part.quantity || 0) * (part.unitPrice || 0);
                     return (
                       <tr key={index}>
-                        <td className="border px-2 py-1">{part.partName}</td>
-                        <td className="border px-2 py-1">{part.partDescription}</td>
-                        <td className="border px-2 py-1 text-right">₱{(part.unitPrice || 0).toFixed(2)}</td>
+                        <td className="border px-2 py-1">{part.partName || 'Unknown Part'}</td>
+                        <td className="border px-2 py-1">{part.partDescription || 'No description'}</td>
+                        <td className="border px-2 py-1 text-right">₱₱{(Number(part.unitPrice) || 0).toFixed(2)}</td>
                         <td className="border px-2 py-1 text-right">{part.quantity || 1}</td>
                         <td className="border px-2 py-1 text-right">₱{total.toFixed(2)}</td>
                       </tr>
@@ -243,7 +298,7 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
           {/* Notes */}
           <div className="mb-6">
             <h3 className="font-semibold mb-2">Additional Notes</h3>
-            <p className="italic text-gray-700">{quotation?.notes || "N/A"}</p>
+            <p className="italic text-gray-700">{displayQuotation?.notes || "N/A"}</p>
           </div>
 
           {/* Summary */}
@@ -290,7 +345,7 @@ export default function QuotationModal({ isOpen, onClose, quotation }) {
 
           {/* Footer */}
           <div className="text-center text-gray-600 text-xs mt-10 border-t pt-3">
-            <p>Thank you for choosing 2Loy Car Aircon Services!</p>
+            <p>Thank you for choosing Car Aircon Services!</p>
             <p>This document is a system-generated quotation and does not require a signature.</p>
           </div>
         </div>

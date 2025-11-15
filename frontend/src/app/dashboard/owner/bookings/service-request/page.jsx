@@ -5,11 +5,18 @@ import {
   FaSearch, 
   FaHistory,
   FaArrowLeft,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaUsers,
+  FaEye,
+  FaCalendarAlt,
+  FaCheck,
+  FaTimes,
+  FaCalendarPlus,
+  FaFileInvoiceDollar
 } from "react-icons/fa";
 import ServiceRescheduleModal from "@/components/Technician/ServiceRequest/RescheduleServiceRequestModal"; 
 import ConvertToQuotationServiceRequest from "@/components/Technician/ServiceRequest/convertToQuotationServiceRequest";
-import ViewServiceRequestModal from "@/components/Technician/ServiceRequest/viewServiceRequestModal"; // Add this import
+import ViewServiceRequestModal from "@/components/Technician/ServiceRequest/viewServiceRequestModal";
 
 export default function ServiceRequestBookingPage() {
   const [serviceRequests, setServiceRequests] = useState([]);
@@ -31,6 +38,23 @@ export default function ServiceRequestBookingPage() {
   // Convert modal state
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [selectedRequestForConvert, setSelectedRequestForConvert] = useState(null);
+
+  // Calculate summary counts
+  const activeBookings = serviceRequests.filter(req => 
+    ["Pending", "Accepted", "Reviewed", "Rescheduled"].includes(req.status)
+  );
+  
+  const incomingCount = serviceRequests.filter(req => 
+    req.status === "Pending"
+  ).length;
+  
+  const rescheduleCount = serviceRequests.filter(req => 
+    req.status === "Rescheduled"
+  ).length;
+  
+  const historyCount = serviceRequests.filter(req => 
+    ["Converted", "Cancelled", "Completed"].includes(req.status)
+  ).length;
 
   // Fetch data from backend
   const fetchServiceRequests = async () => {
@@ -261,25 +285,25 @@ export default function ServiceRequestBookingPage() {
         onRescheduleSuccess={handleRescheduleSuccess}              
       />
 
-// View Details Modal
-{viewModalOpen && (
-  <ViewServiceRequestModal
-    isOpen={viewModalOpen}
-    onClose={() => setViewModalOpen(false)}
-    serviceRequest={selectedRequestForView}
-    onReview={handleReview}
-    actionLoading={actionLoading}
-  />
-)}
+      {/* View Details Modal */}
+      {viewModalOpen && (
+        <ViewServiceRequestModal
+          isOpen={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          serviceRequest={selectedRequestForView}
+          onReview={handleReview}
+          actionLoading={actionLoading}
+        />
+      )}
 
       {/* Convert to Job Order Modal */}
-<ConvertToQuotationServiceRequest
-  isOpen={convertModalOpen}
-  onClose={() => setConvertModalOpen(false)}
-  serviceRequest={selectedRequestForConvert}
-  onConvert={handleConvert}
-  actionLoading={actionLoading}
-/>
+      <ConvertToQuotationServiceRequest
+        isOpen={convertModalOpen}
+        onClose={() => setConvertModalOpen(false)}
+        serviceRequest={selectedRequestForConvert}
+        onConvert={handleConvert}
+        actionLoading={actionLoading}
+      />
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Service Request Management</h1>
@@ -293,6 +317,77 @@ export default function ServiceRequestBookingPage() {
           {showHistory ? <FaArrowLeft className="mr-3" /> : <FaHistory className="mr-3" />}
           {showHistory ? 'Back to Active Requests' : `View Service History`}
         </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Active Bookings */}
+        <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
+            <FaUsers className="text-indigo-600 text-7xl" />
+          </div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <FaUsers className="text-white text-2xl" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 font-medium text-sm mb-1">Active Bookings</p>
+            <p className="text-3xl font-bold text-gray-800">{activeBookings.length}</p>
+            <p className="text-xs text-gray-400 mt-1">Awaiting action</p>
+          </div>
+        </div>
+
+        {/* Incoming */}
+        <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
+            <FaEye className="text-purple-600 text-7xl" />
+          </div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="bg-gradient-to-br from-purple-500 to-violet-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <FaEye className="text-white text-2xl" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 font-medium text-sm mb-1">Incoming</p>
+            <p className="text-3xl font-bold text-gray-800">{incomingCount}</p>
+            <p className="text-xs text-gray-400 mt-1">New requests</p>
+          </div>
+        </div>
+
+        {/* Reschedules */}
+        <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
+            <FaCalendarAlt className="text-yellow-500 text-7xl" />
+          </div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="bg-gradient-to-br from-yellow-400 to-amber-500 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <FaCalendarAlt className="text-white text-2xl" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 font-medium text-sm mb-1">Reschedules</p>
+            <p className="text-3xl font-bold text-gray-800">{rescheduleCount}</p>
+            <p className="text-xs text-gray-400 mt-1">Adjusted schedules</p>
+          </div>
+        </div>
+
+        {/* History */}
+        <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
+            <FaHistory className="text-green-500 text-7xl" />
+          </div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <FaHistory className="text-white text-2xl" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 font-medium text-sm mb-1">History</p>
+            <p className="text-3xl font-bold text-gray-800">{historyCount}</p>
+            <p className="text-xs text-gray-400 mt-1">Completed & cancelled</p>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -402,9 +497,10 @@ export default function ServiceRequestBookingPage() {
                         {/* View button - always visible for all requests */}
                         <button
                           onClick={() => handleView(request)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs transition"
+                          className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
                         >
-                          View
+                          <FaEye className="text-xs" />
+                          <span>View</span>
                         </button>
                         
                         {/* Accept button - only for Pending status */}
@@ -412,9 +508,10 @@ export default function ServiceRequestBookingPage() {
                           <button
                             onClick={() => handleAccept(request)}
                             disabled={actionLoading === request.serviceRequestId}
-                            className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs transition disabled:opacity-50"
+                            className="flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm space-x-1 disabled:opacity-50"
                           >
-                            {actionLoading === request.serviceRequestId ? 'Processing...' : 'Accept'}
+                            <FaCheck className="text-xs" />
+                            <span>{actionLoading === request.serviceRequestId ? 'Processing...' : 'Accept'}</span>
                           </button>
                         )}
                         
@@ -423,9 +520,10 @@ export default function ServiceRequestBookingPage() {
                           <button
                             onClick={() => handleCancel(request)}
                             disabled={actionLoading === request.serviceRequestId}
-                            className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs transition disabled:opacity-50"
+                            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1 disabled:opacity-50"
                           >
-                            {actionLoading === request.serviceRequestId ? 'Processing...' : 'Cancel'}
+                            <FaTimes className="text-xs" />
+                            <span>{actionLoading === request.serviceRequestId ? 'Processing...' : 'Cancel'}</span>
                           </button>
                         )}
                         
@@ -433,9 +531,10 @@ export default function ServiceRequestBookingPage() {
                         {!showHistory && ["Pending", "Accepted", "Reviewed", "Rescheduled"].includes(request.status) && (
                           <button
                             onClick={() => handleReschedule(request)}
-                            className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-xs transition"
+                            className="flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors shadow-sm space-x-1"
                           >
-                            Reschedule
+                            <FaCalendarPlus className="text-xs" />
+                            <span>Reschedule</span>
                           </button>
                         )}
                         
@@ -443,9 +542,10 @@ export default function ServiceRequestBookingPage() {
                         {!showHistory && request.status === "Reviewed" && (
                           <button
                             onClick={() => handleConvertClick(request)}
-                            className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs transition"
+                            className="flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm space-x-1"
                           >
-                            Convert
+                            <FaFileInvoiceDollar className="text-xs" />
+                            <span>Convert</span>
                           </button>
                         )}
                       </div>

@@ -14,22 +14,22 @@ async function getServiceByIdModel(id) {
 
 // Create service
 async function createServiceModel(data) {
-  const { servicesName, servicesDescription, price } = data;
+  const { servicesName, servicesDescription } = data;
   const [result] = await pool.query(
-    "INSERT INTO services (servicesName, servicesDescription, price) VALUES (?, ?, ?)",
-    [servicesName, servicesDescription, price]
+    "INSERT INTO services (servicesName, servicesDescription) VALUES (?, ?)",
+    [servicesName, servicesDescription]
   );
   return { id: result.insertId, ...data };
 }
 
 // Update service
 async function updateServiceModel(id, data) {
-  const { servicesName, servicesDescription, price } = data;
+  const { servicesName, servicesDescription } = data;
   const [result] = await pool.query(
     `UPDATE services 
-     SET servicesName = ?, servicesDescription = ?, price = ?
+     SET servicesName = ?, servicesDescription = ?
      WHERE servicesId = ?`,
-    [servicesName, servicesDescription, price, id]
+    [servicesName, servicesDescription, id]
   );
   return result;
 }

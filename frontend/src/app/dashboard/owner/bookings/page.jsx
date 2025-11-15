@@ -9,7 +9,10 @@ import {
   FaTimes,
   FaHistory,
   FaEye,
-  FaArrowLeft
+  FaArrowLeft,
+  FaCheck,
+  FaUserTimes,
+  FaCalendarPlus
 } from "react-icons/fa";
 import RescheduleModal from "@/components/rescheduleModal";
 import BookingsTable from "@/components/Technician/Bookings/BookingsTable";

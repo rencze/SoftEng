@@ -2,17 +2,18 @@
 import { useState, useEffect } from "react";
 import { FaCheckCircle } from "react-icons/fa";
 import NavbarAfterLogin from "@/components/NavbarAfterLogin";
-import CustomerSideBar from "@/components/Customer/customerSideBar"; 
+import CustomerSideBar from "@/components/Customer/CustomerSideBar"; // Fixed import path
 import CustomerRescheduleModal from "@/components/Customer/CustomerRescheduleModal";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Import the new tab components
+// Import the tab components
 import ProfileTab from "@/components/Customer/Profile/ProfileTab";
 import SecurityTab from "@/components/Customer/Security&Password/SecurityTab";
 import CarTab from "@/components/Customer/Car/CarTab";
 import BookingTab from "@/components/Customer/Booking/BookingTab";
 import ServiceJobTab from "@/components/Customer/Service-Job/ServiceJobTab";
 import PaymentTab from "@/components/Customer/Payment/PaymentTab";
+import QuotationTab from "@/components/Customer/Quotation/QuotationTab";
 
 export default function ProfileSettingsPage() {
   const { user: authUser } = useAuth();
@@ -49,6 +50,11 @@ export default function ProfileSettingsPage() {
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
+  // Quotation state
+  const [quotations, setQuotations] = useState([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [quotationActionLoading, setQuotationActionLoading] = useState(null);
+
   // Reschedule Modal state
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [selectedBookingForReschedule, setSelectedBookingForReschedule] = useState(null);
@@ -75,6 +81,13 @@ export default function ProfileSettingsPage() {
   useEffect(() => {
     if (activeTab === "myBooking" && user) {
       fetchUserBookings();
+    }
+  }, [activeTab, user]);
+
+  // Fetch quotations when Quotation tab is active
+  useEffect(() => {
+    if (activeTab === "quotation" && user) {
+      fetchUserQuotations();
     }
   }, [activeTab, user]);
 
@@ -112,6 +125,32 @@ export default function ProfileSettingsPage() {
       setTimeout(() => setMessage(""), 3000);
     } finally {
       setLoadingBookings(false);
+    }
+  };
+
+  // Fetch user's quotations
+  const fetchUserQuotations = async () => {
+    setLoadingQuotations(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:3001/api/quotations/user", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const userQuotations = await response.json();
+        setQuotations(userQuotations);
+      } else {
+        throw new Error("Failed to fetch quotations");
+      }
+    } catch (error) {
+      console.error("Error fetching quotations:", error);
+      setMessage("Error loading quotations");
+      setTimeout(() => setMessage(""), 3000);
+    } finally {
+      setLoadingQuotations(false);
     }
   };
 
@@ -203,38 +242,94 @@ export default function ProfileSettingsPage() {
   };
 
   // Cancel booking
-// In your main ProfileSettingsPage component
-const cancelBooking = async (bookingId) => {
-  setActionLoading(bookingId);
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`http://localhost:3001/api/bookings/${bookingId}/status`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        statusId: 5, // Cancelled status (from your bookingStatus table)
-        changedBy: user?.userId,
-        remarks: "Cancelled by customer"
-      })
-    });
+  const cancelBooking = async (bookingId) => {
+    setActionLoading(bookingId);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3001/api/bookings/${bookingId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          statusId: 5, // Cancelled status
+          changedBy: user?.userId,
+          remarks: "Cancelled by customer"
+        })
+      });
 
-    if (response.ok) {
-      setMessage("Booking cancelled successfully!");
-      fetchUserBookings(); // Refresh the list
-    } else {
-      throw new Error("Failed to cancel booking");
+      if (response.ok) {
+        setMessage("Booking cancelled successfully!");
+        fetchUserBookings(); // Refresh the list
+      } else {
+        throw new Error("Failed to cancel booking");
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      setMessage("Error cancelling booking");
+    } finally {
+      setActionLoading(null);
+      setTimeout(() => setMessage(""), 3000);
     }
-  } catch (error) {
-    console.error("Error cancelling booking:", error);
-    setMessage("Error cancelling booking");
-  } finally {
-    setActionLoading(null);
-    setTimeout(() => setMessage(""), 3000);
-  }
-};
+  };
+
+  // Accept quotation
+  const acceptQuotation = async (quotationId) => {
+    setQuotationActionLoading(quotationId);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3001/api/quotations/${quotationId}/accept`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setMessage("Quotation accepted successfully!");
+        fetchUserQuotations(); // Refresh the list
+      } else {
+        throw new Error("Failed to accept quotation");
+      }
+    } catch (error) {
+      console.error("Error accepting quotation:", error);
+      setMessage("Error accepting quotation");
+    } finally {
+      setQuotationActionLoading(null);
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
+  // Reject quotation
+  const rejectQuotation = async (quotationId) => {
+    setQuotationActionLoading(quotationId);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3001/api/quotations/${quotationId}/reject`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setMessage("Quotation rejected successfully!");
+        fetchUserQuotations(); // Refresh the list
+      } else {
+        throw new Error("Failed to reject quotation");
+      }
+    } catch (error) {
+      console.error("Error rejecting quotation:", error);
+      setMessage("Error rejecting quotation");
+    } finally {
+      setQuotationActionLoading(null);
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
   // Open reschedule modal
   const openRescheduleModal = (booking) => {
     setSelectedBookingForReschedule(booking);
@@ -269,10 +364,10 @@ const cancelBooking = async (bookingId) => {
     return statusColors[statusName] || 'bg-gray-100 text-gray-800 border border-gray-200';
   };
 
-// For customer side, always allow cancel/reschedule for active bookings
-const canModifyBooking = (statusName) => {
-  return ['Confirmed', 'Rescheduled'].includes(statusName);
-};
+  // For customer side, always allow cancel/reschedule for active bookings
+  const canModifyBooking = (statusName) => {
+    return ['Confirmed', 'Rescheduled'].includes(statusName);
+  };
 
   if (loading) {
     return (
@@ -363,6 +458,18 @@ const canModifyBooking = (statusName) => {
 
               {/* Car Profile Tab */}
               {activeTab === "carProfile" && <CarTab />}
+
+              {/* Quotation Tab */}
+              {activeTab === "quotation" && (
+                <QuotationTab
+                  quotations={quotations}
+                  loadingQuotations={loadingQuotations}
+                  fetchUserQuotations={fetchUserQuotations}
+                  acceptQuotation={acceptQuotation}
+                  rejectQuotation={rejectQuotation}
+                  actionLoading={quotationActionLoading}
+                />
+              )}
             </div>
           </div>
         </div>

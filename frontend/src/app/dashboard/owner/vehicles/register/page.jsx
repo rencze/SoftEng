@@ -1,7 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { FaCar, FaSearch, FaSort, FaPlus, FaBan, FaUserEdit, FaHistory } from "react-icons/fa";
+import {
+  FaCar,
+  FaSearch,
+  FaSort,
+  FaPlus,
+  FaBan,
+  FaUserEdit,
+  FaHistory,
+  FaTimes,
+  FaIdCard,
+  FaUser,
+  FaExclamationTriangle,
+  FaShieldAlt
+} from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import React from "react";
 
@@ -42,10 +55,10 @@ const SearchableDropdown = React.memo(({ options, value, onChange, placeholder, 
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
         disabled={disabled}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:bg-gray-100 disabled:cursor-not-allowed"
       />
       {isOpen && filteredOptions.length > 0 && (
-        <ul className="absolute z-10 w-full max-h-40 overflow-auto bg-white border border-gray-300 rounded-lg mt-1 shadow-lg">
+        <ul className="absolute z-10 w-full max-h-40 overflow-auto bg-white border border-gray-300 rounded-xl mt-1 shadow-lg">
           {filteredOptions.map((opt, idx) => (
             <li
               key={idx}
@@ -103,7 +116,7 @@ export default function RegisteredVehiclesPage() {
   });
   const [newOwner, setNewOwner] = useState("");
   
-  // 🟩 Updated for new Change Owner modal - storing entire vehicle object
+  // Updated for new Change Owner modal - storing entire vehicle object
   const [showChangeOwnerModal, setShowChangeOwnerModal] = useState(false);
   const [changeOwnerData, setChangeOwnerData] = useState({ 
     vehicle: null, 
@@ -165,7 +178,7 @@ export default function RegisteredVehiclesPage() {
     }
   }, []);
 
-  // 🟩 Updated: Open Change Owner modal and store entire vehicle object
+  // Updated: Open Change Owner modal and store entire vehicle object
   const handleOpenChangeOwner = async (vehicle) => {
     setChangeOwnerData({ vehicle, currentOwner: "" });
     setIsCustomerLoading(true);
@@ -174,7 +187,7 @@ export default function RegisteredVehiclesPage() {
     setShowChangeOwnerModal(true);
   };
 
-  // 🟩 Updated: Handle saving owner change using the stored vehicle object
+  // Updated: Handle saving owner change using the stored vehicle object
   const handleSaveChangeOwner = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -537,7 +550,7 @@ export default function RegisteredVehiclesPage() {
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg transition-colors"
+          className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg font-medium"
         >
           <FaPlus className="mr-2" /> Register Vehicle
         </button>
@@ -660,244 +673,318 @@ export default function RegisteredVehiclesPage() {
         )}
       </div>
 
-      {/* Register/Edit Vehicle Modal */}
+      {/* Improved Register/Edit Vehicle Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-3xl shadow-xl relative">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">
-              {editingVehicle ? "Edit Vehicle Registration" : "Register New Vehicle"}
-            </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-blue-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">
+                  {editingVehicle ? "Edit Vehicle Registration" : "Register New Vehicle"}
+                </h2>
+                <button
+                  onClick={closeModal}
+                  className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-xl" />
+                </button>
+              </div>
+              <p className="text-blue-100 mt-2">
+                {editingVehicle 
+                  ? "Update vehicle registration information" 
+                  : "Register a new vehicle to the system"
+                }
+              </p>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Plate Number *
-                </label>
-                {dropdownsLoading ? (
-                  <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-500">
-                    Loading vehicles...
-                  </div>
-                ) : (
-                  <SearchableDropdown
-                    options={allVehicles.map((v) => v.plateNumber)}
-                    value={vehicleData.plateNumber}
-                    onChange={(val) => setVehicleData((prev) => ({ ...prev, plateNumber: val }))}
-                    placeholder="Select or type plate number..."
-                  />
-                )}
-                {vehicleData.plateNumber && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    {allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.brand || ''} 
-                    {allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.model ? ` ${allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.model}` : ''}
-                    {allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.year ? ` (${allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.year})` : ''}
-                  </div>
-                )}
+            {/* Form */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Plate Number */}
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                    <FaIdCard className="mr-2 text-blue-600" />
+                    Plate Number *
+                  </label>
+                  {dropdownsLoading ? (
+                    <div className="w-full p-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-500">
+                      Loading vehicles...
+                    </div>
+                  ) : (
+                    <SearchableDropdown
+                      options={allVehicles.map((v) => v.plateNumber)}
+                      value={vehicleData.plateNumber}
+                      onChange={(val) => setVehicleData((prev) => ({ ...prev, plateNumber: val }))}
+                      placeholder="Select or type plate number..."
+                    />
+                  )}
+                  {vehicleData.plateNumber && (
+                    <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                      <strong>Vehicle Details:</strong> {
+                        allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.brand || ''
+                      } {
+                        allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.model ? 
+                        `${allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.model}` : ''
+                      } {
+                        allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.year ? 
+                        ` (${allVehicles.find(v => v.plateNumber === vehicleData.plateNumber)?.year})` : ''
+                      }
+                    </div>
+                  )}
+                </div>
+
+                {/* Current Owner */}
+                <div>
+                  <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                    <FaUser className="mr-2 text-blue-600" />
+                    Current Owner *
+                  </label>
+                  {dropdownsLoading ? (
+                    <div className="w-full p-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-500">
+                      Loading customers...
+                    </div>
+                  ) : (
+                    <SearchableDropdown
+                      options={customers.map((c) => `${c.firstName} ${c.lastName}`)}
+                      value={vehicleData.currentOwner}
+                      onChange={(val) => setVehicleData((prev) => ({ ...prev, currentOwner: val }))}
+                      placeholder="Select or type owner name..."
+                    />
+                  )}
+                  {vehicleData.currentOwner && (
+                    <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                      <strong>Contact:</strong> {
+                        customers.find(c => `${c.firstName} ${c.lastName}` === vehicleData.currentOwner)?.email || ''
+                      }
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Owner *
+              {/* Warning Note for Editing */}
+              {editingVehicle && (
+                <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                  <div className="flex items-start">
+                    <FaExclamationTriangle className="text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800 mb-1">Important Note</p>
+                      <p className="text-sm text-yellow-700">
+                        Changing the owner will create a new ownership record in the vehicle's history.
+                        The current ownership period will be closed and a new one will begin.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                <button
+                  onClick={closeModal}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveVehicle}
+                  disabled={!vehicleData.plateNumber || !vehicleData.currentOwner || dropdownsLoading}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {editingVehicle ? "Update Registration" : "Register Vehicle"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Improved Change Owner Modal */}
+      {showChangeOwnerModal && changeOwnerData.vehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-green-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold flex items-center">
+                  <FaUserEdit className="mr-2" />
+                  Change Vehicle Owner
+                </h2>
+                <button
+                  onClick={() => setShowChangeOwnerModal(false)}
+                  className="p-2 hover:bg-green-700 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-xl" />
+                </button>
+              </div>
+              <p className="text-green-100 mt-2">
+                Transfer ownership of {changeOwnerData.vehicle.plateNumber}
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Vehicle Information */}
+              <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <h3 className="font-semibold text-blue-800 mb-3 flex items-center">
+                  <FaCar className="mr-2" />
+                  Vehicle Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Plate Number:</span>
+                    <span className="font-medium">{changeOwnerData.vehicle.plateNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Current Owner:</span>
+                    <span className="font-medium">{changeOwnerData.vehicle.currentOwner}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ownership:</span>
+                    <span className="font-medium">{changeOwnerData.vehicle.ownerLabel}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Owner Selection */}
+              <div className="mb-6">
+                <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                  <FaUser className="mr-2 text-green-600" />
+                  New Owner *
                 </label>
-                {dropdownsLoading ? (
-                  <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-500">
+                {isCustomerLoading ? (
+                  <div className="w-full p-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-500">
                     Loading customers...
                   </div>
                 ) : (
                   <SearchableDropdown
                     options={customers.map((c) => `${c.firstName} ${c.lastName}`)}
-                    value={vehicleData.currentOwner}
-                    onChange={(val) => setVehicleData((prev) => ({ ...prev, currentOwner: val }))}
-                    placeholder="Select or type owner name..."
+                    value={changeOwnerData.currentOwner}
+                    onChange={(val) => setChangeOwnerData((prev) => ({ ...prev, currentOwner: val }))}
+                    placeholder="Select or type new owner name..."
                   />
                 )}
-                {vehicleData.currentOwner && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    {customers.find(c => `${c.firstName} ${c.lastName}` === vehicleData.currentOwner)?.email || ''}
+                {changeOwnerData.currentOwner && (
+                  <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                    <strong>Contact:</strong> {
+                      customers.find(c => `${c.firstName} ${c.lastName}` === changeOwnerData.currentOwner)?.email || ''
+                    }
                   </div>
                 )}
               </div>
-            </div>
 
-            {editingVehicle && (
-              <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Changing the owner will create a new ownership record in the history.
-                </p>
+              {/* Warning */}
+              <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200 mb-6">
+                <div className="flex items-start">
+                  <FaExclamationTriangle className="text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800 mb-1">Important Notice</p>
+                    <p className="text-sm text-yellow-700">
+                      This action will close the current ownership record and start a new one in the vehicle's history.
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
 
-            <div className="mt-8 flex justify-end gap-4">
-              <button
-                onClick={closeModal}
-                className="px-6 py-3 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveVehicle}
-                disabled={!vehicleData.plateNumber || !vehicleData.currentOwner || dropdownsLoading}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {editingVehicle ? "Update Registration" : "Register Vehicle"}
-              </button>
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setShowChangeOwnerModal(false)}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveChangeOwner}
+                  disabled={!changeOwnerData.currentOwner}
+                  className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Change Owner
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 🟩 New Change Owner Modal - Fixed with vehicle object */}
-      {showChangeOwnerModal && changeOwnerData.vehicle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="font-semibold text-blue-800 mb-2">Vehicle Information</h3>
-              <p><strong>Plate Number:</strong> {changeOwnerData.vehicle.plateNumber}</p>
-              <p><strong>Current Owner:</strong> {changeOwnerData.vehicle.currentOwner}</p>
-              <p><strong>Current Ownership:</strong> {changeOwnerData.vehicle.ownerLabel}</p>
-            </div>
-
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <FaUserEdit /> Change Vehicle Owner
-            </h2>
-
-            {isCustomerLoading ? (
-              <p className="text-gray-500 text-center">Loading customers...</p>
-            ) : (
-              <SearchableDropdown
-                options={customers.map((c) => `${c.firstName} ${c.lastName}`)}
-                value={changeOwnerData.currentOwner}
-                onChange={(val) =>
-                  setChangeOwnerData((prev) => ({ ...prev, currentOwner: val }))
-                }
-                placeholder="Select or type owner name..."
-              />
-            )}
-
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 mb-6">
-              <p className="text-sm text-yellow-800">
-                <strong>Important:</strong> This action will close the current ownership and start a new one in the history.
-              </p>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowChangeOwnerModal(false)}
-                className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveChangeOwner}
-                disabled={!changeOwnerData.currentOwner}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Original Change Owner Modal */}
-      {isChangeOwnerModalOpen && vehicleToChange && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-2xl shadow-xl relative">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Change Vehicle Owner</h2>
-            
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="font-semibold text-blue-800 mb-2">Vehicle Information</h3>
-              <p><strong>Plate Number:</strong> {vehicleToChange.plateNumber}</p>
-              <p><strong>Current Owner:</strong> {vehicleToChange.currentOwner}</p>
-              <p><strong>Current Ownership:</strong> {vehicleToChange.ownerLabel}</p>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Owner *
-              </label>
-              {dropdownsLoading ? (
-                <div className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-500">
-                  Loading customers...
-                </div>
-              ) : (
-                <SearchableDropdown
-                  options={customers.map((c) => `${c.firstName} ${c.lastName}`)}
-                  value={newOwner}
-                  onChange={(val) => setNewOwner(val)}
-                  placeholder="Select or type new owner name..."
-                />
-              )}
-              {newOwner && (
-                <div className="mt-2 text-xs text-gray-500">
-                  {customers.find(c => `${c.firstName} ${c.lastName}` === newOwner)?.email || ''}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 mb-6">
-              <p className="text-sm text-yellow-800">
-                <strong>Important:</strong> This action will close the current ownership and start a new one in the history.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={closeChangeOwnerModal}
-                className="px-6 py-3 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={changeOwner}
-                disabled={!newOwner || newOwner === vehicleToChange.currentOwner || dropdownsLoading}
-                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                Change Owner
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Block/Unregister Vehicle Modal */}
+      {/* Improved Block/Unregister Vehicle Modal */}
       {isBlockModalOpen && vehicleToBlock && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-2xl shadow-xl relative">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Block/Unregister Vehicle</h2>
-            
-            <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
-              <h3 className="font-semibold text-red-800 mb-2">Vehicle to Block</h3>
-              <p><strong>Plate Number:</strong> {vehicleToBlock.plateNumber}</p>
-              <p><strong>Current Owner:</strong> {vehicleToBlock.currentOwner}</p>
-              <p><strong>Ownership:</strong> {vehicleToBlock.ownerLabel}</p>
-            </div>
-
-            <div className="p-4 bg-red-50 rounded-lg border border-red-200 mb-6">
-              <h4 className="font-semibold text-red-800 mb-2">Warning</h4>
-              <p className="text-sm text-red-700">
-                This action will:
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-red-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold flex items-center">
+                  <FaBan className="mr-2" />
+                  Block Vehicle
+                </h2>
+                <button
+                  onClick={closeBlockModal}
+                  className="p-2 hover:bg-red-700 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-xl" />
+                </button>
+              </div>
+              <p className="text-red-100 mt-2">
+                Remove {vehicleToBlock.plateNumber} from registered vehicles
               </p>
-              <ul className="text-sm text-red-700 list-disc list-inside mt-2">
-                <li>Close the current ownership record</li>
-                <li>Remove the vehicle from registered vehicles</li>
-                <li>Make the vehicle available for new registration</li>
-                <li>This action cannot be undone</li>
-              </ul>
             </div>
 
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={closeBlockModal}
-                className="px-6 py-3 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={blockVehicle}
-                className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
-              >
-                Block Vehicle
-              </button>
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Vehicle Information */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <FaCar className="mr-2" />
+                  Vehicle to Block
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Plate Number:</span>
+                    <span className="font-medium">{vehicleToBlock.plateNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Current Owner:</span>
+                    <span className="font-medium">{vehicleToBlock.currentOwner}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ownership:</span>
+                    <span className="font-medium">{vehicleToBlock.ownerLabel}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="p-4 bg-red-50 rounded-xl border border-red-200 mb-6">
+                <div className="flex items-start">
+                  <FaShieldAlt className="text-red-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800 mb-2">Warning: This action cannot be undone</p>
+                    <ul className="text-sm text-red-700 space-y-1">
+                      <li>• Close the current ownership record</li>
+                      <li>• Remove vehicle from registered vehicles</li>
+                      <li>• Make vehicle available for new registration</li>
+                      <li>• All data will be preserved in history</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={closeBlockModal}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={blockVehicle}
+                  className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium shadow-sm"
+                >
+                  Block Vehicle
+                </button>
+              </div>
             </div>
           </div>
         </div>

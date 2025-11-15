@@ -15,6 +15,7 @@ const {
   addPackageController,
   fetchQuotationPackages,
   removePackageController,
+  fetchQuotationParts,
   fetchCustomerQuotations,
   fetchTechnicianQuotations,
 } = require("./quotation.controller");
@@ -41,5 +42,8 @@ router.delete("/:id/services", removeServiceController);
 router.get("/:id/packages", fetchQuotationPackages);
 router.post("/:id/packages", addPackageController);
 router.delete("/:id/packages", removePackageController);
+
+// 🔹 Quotation parts routes
+router.get("/:id/parts", fetchQuotationParts);
 
 module.exports = router;

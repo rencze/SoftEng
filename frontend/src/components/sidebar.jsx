@@ -144,8 +144,6 @@ export default function Sidebar({ isOpen }) {
           color: "red",
           subLinks: [
             { name: "Service Jobs", path: "/dashboard/owner/service-jobs" },
-            { name: "Service Job Overview", path: "/dashboard/owner/service-jobs/service-jobs-overview" },
-            { name: "Service Job Workflow", path: "/dashboard/owner/service-jobs/service-jobs-overview/service-job-workflow" },
           ],
         },
 
