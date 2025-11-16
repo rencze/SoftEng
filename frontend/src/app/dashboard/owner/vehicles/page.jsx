@@ -201,16 +201,11 @@ export default function VehiclesPage() {
     }
   };
 
-  // Filtering + sorting
+  // Filtering + sorting - UPDATED: Search by plate number only
   const filteredVehicles = vehicles
     .filter((v) => {
       const searchText = search.toLowerCase();
-      return (
-        v.plateNumber?.toLowerCase().includes(searchText) ||
-        v.model?.toLowerCase().includes(searchText) ||
-        v.brand?.toLowerCase().includes(searchText) ||
-        String(v.year || "").toLowerCase().includes(searchText)
-      );
+      return v.plateNumber?.toLowerCase().includes(searchText);
     })
     .sort((a, b) => {
       let aVal = a[sortField] || "";
@@ -263,13 +258,13 @@ export default function VehiclesPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search - UPDATED: Changed placeholder text */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="relative max-w-md">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search vehicles by plate, model, brand, year..."
+            placeholder="Search vehicles by plate number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -363,7 +358,7 @@ export default function VehiclesPage() {
             </h3>
             <p className="text-gray-500">
               {search
-                ? "Try adjusting your search criteria"
+                ? "No vehicles found with this plate number"
                 : "Get started by adding your first vehicle"}
             </p>
           </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { FaSearch, FaFilter, FaDownload, FaEye, FaReceipt, FaCreditCard, FaMoneyBillWave, FaWallet, FaCalendar, FaExchangeAlt, FaPlus, FaFileInvoice } from "react-icons/fa";
 
-export default function PaymentHistoryPage() {
+export default function InvoiceMainPage() {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [quotations, setQuotations] = useState([]);
@@ -18,181 +18,48 @@ export default function PaymentHistoryPage() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAddInvoice, setShowAddInvoice] = useState(false);
 
-  // Sample data
+  // Fetch data from API
   useEffect(() => {
-    // Sample quotations data
-    const sampleQuotations = [
-      {
-        id: 1001,
-        quotationNumber: "QT-001234",
-        clientName: "John Smith",
-        clientEmail: "john.smith@email.com",
-        clientPhone: "+1 (555) 123-4567",
-        items: [
-          { description: "Website Development", quantity: 1, rate: 3000, amount: 3000 },
-          { description: "SEO Setup", quantity: 1, rate: 500, amount: 500 },
-          { description: "Content Creation", quantity: 5, rate: 100, amount: 500 }
-        ],
-        subtotal: 4000,
-        tax: 400,
-        discount: 200,
-        total: 4200,
-        status: "approved", // draft, sent, approved, rejected
-        validUntil: "2024-02-15",
-        createdAt: "2024-01-10",
-        notes: "Includes 3 rounds of revisions"
-      },
-      {
-        id: 1002,
-        quotationNumber: "QT-001235",
-        clientName: "Sarah Johnson",
-        clientEmail: "sarah.j@email.com",
-        clientPhone: "+1 (555) 987-6543",
-        items: [
-          { description: "Mobile App Development", quantity: 1, rate: 5000, amount: 5000 },
-          { description: "API Integration", quantity: 2, rate: 750, amount: 1500 }
-        ],
-        subtotal: 6500,
-        tax: 650,
-        discount: 0,
-        total: 7150,
-        status: "sent",
-        validUntil: "2024-02-20",
-        createdAt: "2024-01-12",
-        notes: "6 months support included"
-      }
-    ];
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // In a real application, you would fetch from your API endpoints
+        // Example:
+        // const paymentsResponse = await fetch('/api/payments');
+        // const paymentsData = await paymentsResponse.json();
+        // setPayments(paymentsData);
+        
+        // const invoicesResponse = await fetch('/api/invoices');
+        // const invoicesData = await invoicesResponse.json();
+        // setInvoices(invoicesData);
+        
+        // const quotationsResponse = await fetch('/api/quotations');
+        // const quotationsData = await quotationsResponse.json();
+        // setQuotations(quotationsData);
 
-    // Sample invoices data
-    const sampleInvoices = [
-      {
-        id: 2001,
-        invoiceNumber: "INV-001234",
-        quotationId: 1001,
-        quotationNumber: "QT-001234",
-        clientName: "John Smith",
-        clientEmail: "john.smith@email.com",
-        clientPhone: "+1 (555) 123-4567",
-        items: [
-          { description: "Website Development", quantity: 1, rate: 3000, amount: 3000 },
-          { description: "SEO Setup", quantity: 1, rate: 500, amount: 500 },
-          { description: "Content Creation", quantity: 5, rate: 100, amount: 500 }
-        ],
-        subtotal: 4000,
-        tax: 400,
-        discount: 200,
-        total: 4200,
-        amountDue: 4200,
-        amountPaid: 0,
-        status: "unpaid", // unpaid, partial, paid, overdue
-        issueDate: "2024-01-15",
-        dueDate: "2024-02-15",
-        paymentTerms: "Net 30",
-        notes: "Thank you for your business!"
-      },
-      {
-        id: 2002,
-        invoiceNumber: "INV-001235",
-        quotationId: 1002,
-        quotationNumber: "QT-001235",
-        clientName: "Sarah Johnson",
-        clientEmail: "sarah.j@email.com",
-        clientPhone: "+1 (555) 987-6543",
-        items: [
-          { description: "Mobile App Development", quantity: 1, rate: 5000, amount: 5000 },
-          { description: "API Integration", quantity: 2, rate: 750, amount: 1500 }
-        ],
-        subtotal: 6500,
-        tax: 650,
-        discount: 0,
-        total: 7150,
-        amountDue: 3650,
-        amountPaid: 3500,
-        status: "partial",
-        issueDate: "2024-01-14",
-        dueDate: "2024-02-14",
-        paymentTerms: "50% advance, 50% on delivery",
-        notes: "Advance payment received"
+        // For now, setting empty arrays since we're removing static data
+        setPayments([]);
+        setInvoices([]);
+        setQuotations([]);
+        
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        // Set empty arrays on error as well
+        setPayments([]);
+        setInvoices([]);
+        setQuotations([]);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    // Sample payments data
-    const samplePayments = [
-      {
-        id: 1,
-        invoiceId: 2001,
-        invoiceNumber: "INV-001234",
-        clientName: "John Smith",
-        amount: 450.00,
-        paymentMethod: "credit",
-        status: "completed",
-        date: "2024-01-15",
-        type: "payment"
-      },
-      {
-        id: 2,
-        invoiceId: 2002,
-        invoiceNumber: "INV-001235",
-        clientName: "Sarah Johnson",
-        amount: 289.50,
-        paymentMethod: "bank",
-        status: "completed",
-        date: "2024-01-14",
-        type: "payment"
-      },
-      {
-        id: 3,
-        invoiceId: 2002,
-        invoiceNumber: "INV-001235",
-        clientName: "Mike Wilson",
-        amount: 125.75,
-        paymentMethod: "cash",
-        status: "pending",
-        date: "2024-01-14",
-        type: "payment"
-      }
-    ];
-
-    // Sample transaction history data
-    const sampleHistory = [
-      {
-        id: 101,
-        invoiceId: 2001,
-        invoiceNumber: "INV-001234",
-        clientName: "John Smith",
-        amount: 150.00,
-        type: "refund",
-        status: "completed",
-        date: "2024-01-16",
-        referenceNumber: "REF-001234",
-        description: "Service cancellation refund"
-      },
-      {
-        id: 102,
-        invoiceId: 2002,
-        invoiceNumber: "INV-001235",
-        clientName: "Lisa Anderson",
-        amount: -75.50,
-        type: "adjustment",
-        status: "completed",
-        date: "2024-01-15",
-        referenceNumber: "ADJ-001235",
-        description: "Price adjustment"
-      }
-    ];
-
-    setQuotations(sampleQuotations);
-    setInvoices(sampleInvoices);
-    
-    // Combine both datasets
-    const allData = [...samplePayments, ...sampleHistory];
-    setPayments(allData);
-    setLoading(false);
+    fetchData();
   }, []);
 
   // Filter data based on active table and filters
   const filteredData = payments.filter(item => {
-    const matchesSearch = item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = item.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.invoiceNumber && item.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (item.referenceNumber && item.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     
@@ -275,6 +142,11 @@ export default function PaymentHistoryPage() {
   };
 
   const exportToCSV = () => {
+    if (filteredData.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
     const headers = activeTable === "payments" 
       ? ["Date", "Client", "Amount", "Method", "Status", "Invoice"]
       : ["Date", "Client", "Amount", "Type", "Status", "Reference", "Description"];
@@ -367,40 +239,51 @@ export default function PaymentHistoryPage() {
       notes: ""
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      // Here you would typically send the data to your API
-      console.log("Adding payment:", formData);
-      
-      // Update invoice amount paid and status
-      if (formData.invoiceId) {
-        const invoice = invoices.find(inv => inv.id === parseInt(formData.invoiceId));
-        if (invoice) {
-          const newAmountPaid = invoice.amountPaid + parseFloat(formData.amount);
-          const newAmountDue = invoice.total - newAmountPaid;
-          const newStatus = newAmountDue <= 0 ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
-          
-          // Update invoice (in real app, this would be an API call)
-          const updatedInvoices = invoices.map(inv => 
-            inv.id === parseInt(formData.invoiceId) 
-              ? { ...inv, amountPaid: newAmountPaid, amountDue: newAmountDue, status: newStatus }
-              : inv
-          );
-          setInvoices(updatedInvoices);
+      try {
+        // Here you would typically send the data to your API
+        console.log("Adding payment:", formData);
+        
+        // Update invoice amount paid and status
+        if (formData.invoiceId) {
+          const invoice = invoices.find(inv => inv.id === parseInt(formData.invoiceId));
+          if (invoice) {
+            const newAmountPaid = invoice.amountPaid + parseFloat(formData.amount);
+            const newAmountDue = invoice.total - newAmountPaid;
+            const newStatus = newAmountDue <= 0 ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
+            
+            // Update invoice (in real app, this would be an API call)
+            const updatedInvoices = invoices.map(inv => 
+              inv.id === parseInt(formData.invoiceId) 
+                ? { ...inv, amountPaid: newAmountPaid, amountDue: newAmountDue, status: newStatus }
+                : inv
+            );
+            setInvoices(updatedInvoices);
+          }
         }
+        
+        alert("Payment added successfully!");
+        setShowAddPayment(false);
+        // Reset form
+        setFormData({
+          invoiceId: "",
+          clientName: "",
+          amount: "",
+          paymentMethod: "credit",
+          date: new Date().toISOString().split('T')[0],
+          notes: ""
+        });
+
+        // Refresh payments data
+        // const paymentsResponse = await fetch('/api/payments');
+        // const paymentsData = await paymentsResponse.json();
+        // setPayments(paymentsData);
+        
+      } catch (error) {
+        console.error("Error adding payment:", error);
+        alert("Error adding payment. Please try again.");
       }
-      
-      alert("Payment added successfully!");
-      setShowAddPayment(false);
-      // Reset form
-      setFormData({
-        invoiceId: "",
-        clientName: "",
-        amount: "",
-        paymentMethod: "credit",
-        date: new Date().toISOString().split('T')[0],
-        notes: ""
-      });
     };
 
     const handleChange = (e) => {
@@ -596,25 +479,43 @@ export default function PaymentHistoryPage() {
       }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      // Generate invoice number
-      const invoiceNumber = `INV-${String(invoices.length + 1).padStart(6, '0')}`;
-      
-      const newInvoice = {
-        id: invoices.length + 2001,
-        invoiceNumber,
-        quotationId: formData.quotationId || null,
-        quotationNumber: formData.quotationId ? quotations.find(q => q.id === parseInt(formData.quotationId))?.quotationNumber : null,
-        ...formData,
-        amountDue: formData.total,
-        amountPaid: 0,
-        status: 'unpaid'
-      };
-      
-      setInvoices(prev => [...prev, newInvoice]);
-      alert("Invoice created successfully!");
-      setShowAddInvoice(false);
+      try {
+        // Generate invoice number
+        const invoiceNumber = `INV-${String(invoices.length + 1).padStart(6, '0')}`;
+        
+        const newInvoice = {
+          id: invoices.length + 2001,
+          invoiceNumber,
+          quotationId: formData.quotationId || null,
+          quotationNumber: formData.quotationId ? quotations.find(q => q.id === parseInt(formData.quotationId))?.quotationNumber : null,
+          ...formData,
+          amountDue: formData.total,
+          amountPaid: 0,
+          status: 'unpaid'
+        };
+        
+        // In a real app, you would send this to your API
+        // await fetch('/api/invoices', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify(newInvoice)
+        // });
+
+        setInvoices(prev => [...prev, newInvoice]);
+        alert("Invoice created successfully!");
+        setShowAddInvoice(false);
+
+        // Refresh invoices data
+        // const invoicesResponse = await fetch('/api/invoices');
+        // const invoicesData = await invoicesResponse.json();
+        // setInvoices(invoicesData);
+        
+      } catch (error) {
+        console.error("Error creating invoice:", error);
+        alert("Error creating invoice. Please try again.");
+      }
     };
 
     const handleChange = (e) => {
@@ -1151,7 +1052,7 @@ export default function PaymentHistoryPage() {
                 <td colSpan={activeTable === "payments" ? 8 : 9} className="text-center py-12 text-gray-500">
                   {searchTerm || statusFilter !== "all" || dateFilter.startDate || dateFilter.endDate
                     ? `No ${activeTable} match your search criteria` 
-                    : `No ${activeTable} history found`}
+                    : `No ${activeTable} data available`}
                 </td>
               </tr>
             )}

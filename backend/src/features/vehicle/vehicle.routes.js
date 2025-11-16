@@ -9,11 +9,12 @@ const {
   deleteVehicle,
 } = require("./vehicle.controller");
 
-// Routes
-router.get("/", getAllVehicles);        // GET all
-router.get("/:id", getVehicleById);     // GET one
-router.post("/", createVehicle);        // CREATE
-router.put("/:id", updateVehicle);      // UPDATE
-router.delete("/:id", deleteVehicle);   // DELETE
+// Make sure this route is included
+router.get("/", getAllVehicles);
+router.get("/:id", getVehicleById);
+
+router.post("/", createVehicle);
+router.put("/:id", updateVehicle);
+router.delete("/:id", deleteVehicle);
 
 module.exports = router;

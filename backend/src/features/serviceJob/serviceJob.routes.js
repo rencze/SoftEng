@@ -16,30 +16,50 @@ const {
   updateWorkLogController,
   deleteWorkLogController,
   fetchServiceJobsByStatus,
-  fetchServiceJobsByTechnician
+  fetchServiceJobsByTechnician,
+  searchServiceJobsController,
+  fetchServiceJobSummary,
+
 } = require("./serviceJob.controller");
 
-// 🔹 Main service job routes
-router.get("/", fetchServiceJobs);
-router.post("/", createServiceJobController);
-router.get("/status/:status", fetchServiceJobsByStatus);
-router.get("/technician/:technicianId", fetchServiceJobsByTechnician);
+// ===============================
+// 🔹 SERVICE JOB MAIN ROUTES
+// ===============================
+router.get("/", fetchServiceJobs);                    // Get all service jobs
+router.get("/search", searchServiceJobsController);   // Search service jobs
+router.get("/summary", fetchServiceJobSummary);       // Get service job summary
+router.post("/", createServiceJobController);         // Create new service job
 
-// 🔹 Single service job routes
-router.get("/:id", fetchServiceJob);
-router.put("/:id", updateServiceJobController);
-router.delete("/:id", deleteServiceJobController);
-router.patch("/:id/status", updateServiceJobStatusController);
+// ===============================
+// 🔹 SERVICE JOB FILTER ROUTES
+// ===============================
+router.get("/status/:status", fetchServiceJobsByStatus);              // Get jobs by status
+router.get("/technician/:technicianId", fetchServiceJobsByTechnician); // Get jobs by technician
 
-// 🔹 Technician assignment routes
-router.get("/:id/technicians", fetchServiceJobTechnicians);
-router.post("/:id/technicians", assignTechnicianController);
-router.delete("/:id/technicians", removeTechnicianController);
+// ===============================
+// 🔹 SINGLE SERVICE JOB ROUTES
+// ===============================
+router.get("/:id", fetchServiceJob);                      // Get single service job
+router.put("/:id", updateServiceJobController);           // Update service job
+router.delete("/:id", deleteServiceJobController);        // Delete service job
+router.patch("/:id/status", updateServiceJobStatusController); // Update job status
 
-// 🔹 Work log routes
-router.get("/:id/worklogs", fetchServiceJobWorkLogs);
-router.post("/:id/worklogs", addWorkLogController);
-router.put("/worklogs/:workLogId", updateWorkLogController);
-router.delete("/worklogs/:workLogId", deleteWorkLogController);
+// ===============================
+// 🔹 TECHNICIAN ASSIGNMENT ROUTES
+// ===============================
+router.get("/:id/technicians", fetchServiceJobTechnicians);    // Get job technicians
+router.post("/:id/technicians", assignTechnicianController);   // Assign technician
+router.delete("/:id/technicians", removeTechnicianController); // Remove technician
+
+// ===============================
+// 🔹 WORK LOG ROUTES
+// ===============================
+router.get("/:id/worklogs", fetchServiceJobWorkLogs);          // Get job work logs
+router.post("/:id/worklogs", addWorkLogController);            // Add work log
+router.put("/worklogs/:workLogId", updateWorkLogController);   // Update work log
+router.delete("/worklogs/:workLogId", deleteWorkLogController); // Delete work log
+
+
+
 
 module.exports = router;

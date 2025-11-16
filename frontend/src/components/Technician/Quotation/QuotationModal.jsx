@@ -13,7 +13,8 @@ import {
   FaDollarSign,
   FaEye,
   FaSearch,
-  FaBook
+  FaBook,
+  FaClock
 } from "react-icons/fa";
 import QuotationPreviewModal from './QuotationPreviewModal'; 
 
@@ -31,6 +32,7 @@ export default function QuotationModal({ onClose, onSave }) {
     discount: 0,
     laborCost: 0,
     workTimeEstimation: 0,
+    workTimeUnit: "hours", // New field for time unit
     services: [],
     servicePackages: [],
     customParts: [],
@@ -262,6 +264,7 @@ export default function QuotationModal({ onClose, onSave }) {
       laborCost: parseFloat(quotation.laborCost) || 0,
       discount: parseFloat(quotation.discount) || 0,
       workTimeEstimation: parseFloat(quotation.workTimeEstimation) || 0,
+      workTimeUnit: quotation.workTimeUnit || 'hours', // Include time unit
       quote: quotation.notes,
       validity: parseInt(quotation.validity) || 30,
       services: transformedServices,
@@ -551,6 +554,14 @@ export default function QuotationModal({ onClose, onSave }) {
     }));
   };
 
+  // Handle work time unit change
+  const handleWorkTimeUnitChange = (e) => {
+    setQuotation(prev => ({
+      ...prev,
+      workTimeUnit: e.target.value
+    }));
+  };
+
   const handleCustomPartChange = (index, field, value) => {
     setQuotation(prev => ({
       ...prev,
@@ -627,6 +638,17 @@ export default function QuotationModal({ onClose, onSave }) {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-PH');
+  };
+
+  // Format work time estimation for display
+  const formatWorkTimeEstimation = () => {
+    const value = quotation.workTimeEstimation || 0;
+    const unit = quotation.workTimeUnit || 'hours';
+    
+    if (value === 0) return "Not specified";
+    
+    const unitText = value === 1 ? unit.slice(0, -1) : unit; // Remove 's' for singular
+    return `${value} ${unitText}`;
   };
 
   return (
@@ -1299,6 +1321,40 @@ export default function QuotationModal({ onClose, onSave }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Work Time Estimation
+                          </label>
+                          <div className="flex space-x-2">
+                            <input
+                              type="number"
+                              name="workTimeEstimation"
+                              value={quotation.workTimeEstimation}
+                              onChange={handleQuotationChange}
+                              min="0"
+                              step="0.5"
+                              placeholder="0"
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={loading.saving}
+                            />
+                            <select
+                              name="workTimeUnit"
+                              value={quotation.workTimeUnit}
+                              onChange={handleWorkTimeUnitChange}
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={loading.saving}
+                            >
+                              <option value="hours">Hours</option>
+                              <option value="days">Days</option>
+                              <option value="weeks">Weeks</option>
+                              <option value="months">Months</option>
+                            </select>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Estimated time to complete the work: {formatWorkTimeEstimation()}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Validity Period (Days)
                           </label>
                           <input
@@ -1311,6 +1367,7 @@ export default function QuotationModal({ onClose, onSave }) {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={loading.saving}
                           />
+                          <p className="text-xs text-gray-500 mt-1">How long this quotation is valid</p>
                         </div>
                       </div>
 
@@ -1370,6 +1427,17 @@ export default function QuotationModal({ onClose, onSave }) {
                     <div className="flex justify-between border-t pt-3 text-lg font-bold">
                       <span>Total:</span>
                       <span className="text-blue-600">{formatCurrency(total)}</span>
+                    </div>
+
+                    {/* Work Time Estimation Display */}
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Estimated Time:</span>
+                        <span className="text-sm font-medium flex items-center">
+                          <FaClock className="mr-1 text-gray-500" />
+                          {formatWorkTimeEstimation()}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

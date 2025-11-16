@@ -4,6 +4,7 @@ const {
   createVehicleModel,
   updateVehicleModel,
   deleteVehicleModel,
+  
 } = require("./vehicle.model");
 
 // Get all
@@ -38,16 +39,6 @@ async function createVehicle(req, res) {
   }
 }
 
-
-// async function createVehicle(req, res) {
-//   try {
-//     const result = await createVehicleModel(req.body);
-//     res.status(201).json({ message: "Vehicle created", vehicle: result });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// }
-
 // Update
 async function updateVehicle(req, res) {
   try {
@@ -74,10 +65,12 @@ async function deleteVehicle(req, res) {
   }
 }
 
+
 module.exports = {
   getAllVehicles,
   getVehicleById,
   createVehicle,
   updateVehicle,
   deleteVehicle,
+ 
 };

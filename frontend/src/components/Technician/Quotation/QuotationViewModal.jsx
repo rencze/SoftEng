@@ -338,6 +338,15 @@ export default function QuotationViewModal({ isOpen, onClose, quotation }) {
                       ₱{total.toFixed(2)}
                     </td>
                   </tr>
+                                        <tr>
+        <td className="font-medium w-1/3">Estimated Time:</td>
+        <td>
+          {quotation?.workTimeEstimation && quotation.workTimeEstimation > 0 
+            ? `${quotation.workTimeEstimation} ${quotation.workTimeUnit || 'hours'}`
+            : "Not specified"
+          }
+        </td>
+      </tr>
                 </tbody>
               </table>
             </div>

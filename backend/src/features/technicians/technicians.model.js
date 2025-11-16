@@ -11,7 +11,6 @@ async function syncTechnicians() {
   `);
 }
 
-
 async function getAllTechnicians() {
   await syncTechnicians();
 
@@ -24,15 +23,28 @@ async function getAllTechnicians() {
       u.email,
       u.contactNumber,
       u.address,
-      u.isBlocked = 0 AS active,  -- map blocked users to active/inactive
+      (u.isBlocked = 0) AS active,
       u.roleId,
-      r.roleName
+      r.roleName,
+
+      -- COUNT the number of jobs assigned
+      COUNT(sjt.serviceJobId) AS totalJobs
+
     FROM technicians t
     JOIN users u ON t.userId = u.userId
     JOIN roles r ON u.roleId = r.roleId
+
+    -- LEFT JOIN so technicians with 0 jobs still show
+    LEFT JOIN service_job_technician sjt
+      ON t.technicianId = sjt.technicianId
+
+    GROUP BY t.technicianId, u.userId, u.firstName, u.lastName, u.email, 
+             u.contactNumber, u.address, u.isBlocked, u.roleId, r.roleName
   `);
+
   return rows;
 }
+
 
 
 // Optional: Add technician manually

@@ -4,78 +4,65 @@ const db = require("../../config/db");
 // 🔹 SERVICE JOB CRUD OPERATIONS
 // ===============================
 
-// Get all service jobs with related data
 async function getAllServiceJobs() {
   const [rows] = await db.query(`
     SELECT 
-      sj.serviceJobId,
-      sj.quotationId,
-      sj.vehicleId,
-      sj.jobDescription,
-      sj.guestPlateNumber,
-      sj.guestBrand,
-      sj.guestModel,
-      sj.guestYear,
-      sj.startDate,
-      sj.endDate,
-      sj.remarks,
-      sj.status,
-      sj.createdAt,
-      sj.updatedAt,
+      sj.serviceJobId as id,
+      CONCAT('SJ-', LPAD(sj.serviceJobId, 4, '0')) as jobNumber,
       
-      -- Generate service job number
-      CONCAT('SJ-', LPAD(sj.serviceJobId, 4, '0')) AS serviceJobNumber,
-      
-      -- Quotation details
-      q.quotationNumber,
-      q.totalCost,
+      -- Customer details
       q.customerName,
-      q.customerEmail,
       q.customerPhone,
-      q.customerAddress,
+      q.customerEmail,
+      q.customerAddress as address,
       
-      -- Vehicle details (if registered vehicle)
-      v.plateNumber AS registeredPlateNumber,
-      v.brand AS registeredBrand,
-      v.model AS registeredModel,
-      v.year AS registeredYear,
+      -- Service types from quotation services
+      sj.jobDescription as description,
+      sj.status,
+      DATE(sj.createdAt) as createdAt,
+      sj.startDate as scheduledDate,
+      sj.remarks as notes,
+      q.workTimeEstimation as estimatedDuration,
       
-      -- Use guest vehicle details if no registered vehicle
-      COALESCE(v.plateNumber, sj.guestPlateNumber) AS displayPlateNumber,
-      COALESCE(v.brand, sj.guestBrand) AS displayBrand,
-      COALESCE(v.model, sj.guestModel) AS displayModel,
-      COALESCE(v.year, sj.guestYear) AS displayYear,
+      -- Vehicle info
+      COALESCE(v.plateNumber, sj.guestPlateNumber) as vehiclePlate,
+      COALESCE(v.brand, sj.guestBrand) as vehicleBrand,
+      COALESCE(v.model, sj.guestModel) as vehicleModel,
       
-      -- Technician assignments
-      GROUP_CONCAT(DISTINCT CONCAT(ut.firstName, ' ', ut.lastName) SEPARATOR ', ') AS assignedTechnicians,
-      
-      -- Work log count
-      (SELECT COUNT(*) FROM service_job_worklog wl WHERE wl.serviceJobId = sj.serviceJobId) AS workLogCount
+      -- Quotation reference
+      q.quotationNumber,
+      q.quotationDate,
+      q.validUntil,
+      q.totalCost as totalAmount,
+      q.quoteStatus as status,
+      q.notes as quotationNotes
 
     FROM service_job sj
-    
-    -- Join quotation
     LEFT JOIN (
       SELECT 
         q.quotationId,
-        CONCAT('QTN-', LPAD(q.quotationId, 4, '0')) AS quotationNumber,
+        CONCAT('QTN-', LPAD(q.quotationId, 4, '0')) as quotationNumber,
         q.totalCost,
-        -- Customer details from quotation
+        q.workTimeEstimation,
+        q.createdAt as quotationDate,
+        DATE_ADD(q.createdAt, INTERVAL 30 DAY) as validUntil,
+        'Approved' as quoteStatus,
+        q.notes as quotationNotes,
         CASE 
           WHEN q.serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
           WHEN q.customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
           ELSE q.guestName
         END AS customerName,
         CASE 
-          WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.email
-          WHEN q.customerId IS NOT NULL THEN uc.email
-          ELSE q.guestEmail
-        END AS customerEmail,
-        CASE 
           WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.contactNumber
           WHEN q.customerId IS NOT NULL THEN uc.contactNumber
           ELSE q.guestContact
         END AS customerPhone,
+        CASE 
+          WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.email
+          WHEN q.customerId IS NOT NULL THEN uc.email
+          ELSE q.guestEmail
+        END AS customerEmail,
         CASE 
           WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.address
           WHEN q.customerId IS NOT NULL THEN uc.address
@@ -88,19 +75,110 @@ async function getAllServiceJobs() {
       LEFT JOIN customers c ON q.customerId = c.customerId
       LEFT JOIN users uc ON c.userId = uc.userId
     ) q ON sj.quotationId = q.quotationId
-    
-    -- Join vehicle (if registered)
     LEFT JOIN vehicle v ON sj.vehicleId = v.vehicleId
-    
-    -- Join assigned technicians
-    LEFT JOIN service_job_technician sjt ON sj.serviceJobId = sjt.serviceJobId
-    LEFT JOIN technicians t ON sjt.technicianId = t.technicianId
-    LEFT JOIN users ut ON t.userId = ut.userId
-    
-    GROUP BY sj.serviceJobId
-    ORDER BY sj.createdAt DESC
   `);
-  return rows;
+
+  // Get service types for each job
+  const enhancedRows = await Promise.all(rows.map(async (row) => {
+    // Get service types from quotation services
+    const [serviceTypes] = await db.query(`
+      SELECT DISTINCT s.servicesName
+      FROM quotation_services qs
+      JOIN services s ON qs.serviceId = s.servicesId
+      WHERE qs.quotationId = (
+        SELECT quotationId FROM service_job WHERE serviceJobId = ?
+      )
+      UNION
+      SELECT DISTINCT sp.packageName as servicesName
+      FROM quotation_packages qp
+      JOIN service_packages sp ON qp.servicePackageId = sp.servicePackageId
+      WHERE qp.quotationId = (
+        SELECT quotationId FROM service_job WHERE serviceJobId = ?
+      )
+    `, [row.id, row.id]);
+
+    // Get assigned technicians
+    const [technicians] = await db.query(`
+      SELECT CONCAT(u.firstName, ' ', u.lastName) as technicianName
+      FROM service_job_technician sjt
+      JOIN technicians t ON sjt.technicianId = t.technicianId
+      JOIN users u ON t.userId = u.userId
+      WHERE sjt.serviceJobId = ?
+    `, [row.id]);
+
+    // Get work logs
+    const [workLogs] = await db.query(`
+      SELECT 
+        worklogId as id,
+        DATE(workDate) as date,
+        DATE_FORMAT(workDate, '%h:%i %p') as time,
+        workDescription as action,
+        COALESCE(CONCAT(u.firstName, ' ', u.lastName), 'System') as technician,
+        remarks as notes
+      FROM service_job_worklog wl
+      LEFT JOIN technicians t ON wl.technicianId = t.technicianId
+      LEFT JOIN users u ON t.userId = u.userId
+      WHERE wl.serviceJobId = ?
+      ORDER BY workDate ASC
+    `, [row.id]);
+
+    // Get quotation items
+    const [quotationItems] = await db.query(`
+      SELECT 
+        s.servicesName as name,
+        s.servicesDescription as description,
+        1 as quantity,
+        qs.cost as unitPrice,
+        qs.cost as total
+      FROM quotation_services qs
+      JOIN services s ON qs.serviceId = s.servicesId
+      WHERE qs.quotationId = (
+        SELECT quotationId FROM service_job WHERE serviceJobId = ?
+      )
+      UNION ALL
+      SELECT 
+        sp.packageName as name,
+        sp.packageDescription as description,
+        1 as quantity,
+        qp.cost as unitPrice,
+        qp.cost as total
+      FROM quotation_packages qp
+      JOIN service_packages sp ON qp.servicePackageId = sp.servicePackageId
+      WHERE qp.quotationId = (
+        SELECT quotationId FROM service_job WHERE serviceJobId = ?
+      )
+      UNION ALL
+      SELECT 
+        p.partName as name,
+        p.partDescription as description,
+        qp.quantity,
+        qp.cost as unitPrice,
+        (qp.quantity * qp.cost) as total
+      FROM quotation_parts qp
+      JOIN parts p ON qp.partId = p.partId
+      WHERE qp.quotationId = (
+        SELECT quotationId FROM service_job WHERE serviceJobId = ?
+      )
+    `, [row.id, row.id, row.id]);
+
+    return {
+      ...row,
+      serviceType: serviceTypes.map(st => st.servicesName),
+      assignedTechnicians: technicians.map(t => t.technicianName),
+      workLog: workLogs,
+      referenceQuotation: {
+        quotationNumber: row.quotationNumber,
+        quotationDate: row.quotationDate?.toISOString().split('T')[0],
+        validUntil: row.validUntil?.toISOString().split('T')[0],
+        totalAmount: row.totalAmount,
+        status: row.status,
+        items: quotationItems,
+        notes: row.quotationNotes
+      }
+    };
+  }));
+
+  return enhancedRows;
 }
 
 // Get single service job by ID with all related data
@@ -209,15 +287,21 @@ async function getServiceJobById(id) {
     ORDER BY sjt.assignedAt DESC
   `, [id]);
 
-  // Get work logs
+  // Get work logs with formatted date/time
   const [workLogs] = await db.query(`
     SELECT 
       worklogId,
       workDescription,
       workDate,
-      remarks
-    FROM service_job_worklog
-    WHERE serviceJobId = ?
+      DATE_FORMAT(workDate, '%Y-%m-%d') AS formattedDate,
+      DATE_FORMAT(workDate, '%h:%i %p') AS formattedTime,
+      remarks,
+      technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName
+    FROM service_job_worklog wl
+    LEFT JOIN technicians t ON wl.technicianId = t.technicianId
+    LEFT JOIN users u ON t.userId = u.userId
+    WHERE wl.serviceJobId = ?
     ORDER BY workDate DESC
   `, [id]);
 
@@ -313,6 +397,13 @@ async function createServiceJob(serviceJobData) {
       }
     }
 
+    // Add initial work log entry
+    await connection.query(
+      `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks)
+      VALUES (?, 'Job Created', 'New service job created')`,
+      [serviceJobId]
+    );
+
     await connection.commit();
     return getServiceJobById(serviceJobId);
 
@@ -382,12 +473,34 @@ async function deleteServiceJob(id) {
 // ===============================
 
 // Update service job status
-async function updateServiceJobStatus(id, status) {
-  await db.query(
-    "UPDATE service_job SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE serviceJobId = ?",
-    [status, id]
-  );
-  return getServiceJobById(id);
+async function updateServiceJobStatus(id, status, notes = "") {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    // Update status
+    await connection.query(
+      "UPDATE service_job SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE serviceJobId = ?",
+      [status, id]
+    );
+
+    // Add work log entry for status change
+    await connection.query(
+      `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks)
+      VALUES (?, ?, ?)`,
+      [id, `Status Updated to ${status}`, notes || `Status changed to ${status}`]
+    );
+
+    await connection.commit();
+    return getServiceJobById(id);
+
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 // ===============================
@@ -396,28 +509,102 @@ async function updateServiceJobStatus(id, status) {
 
 // Assign technician to service job
 async function assignTechnicianToJob(serviceJobId, technicianId) {
-  const [result] = await db.query(
-    `INSERT INTO service_job_technician (serviceJobId, technicianId)
-    VALUES (?, ?)`,
-    [serviceJobId, technicianId]
-  );
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
 
-  return { 
-    id: result.insertId, 
-    serviceJobId, 
-    technicianId,
-    assignedAt: new Date()
-  };
+    // Check if already assigned
+    const [existing] = await connection.query(
+      "SELECT * FROM service_job_technician WHERE serviceJobId = ? AND technicianId = ?",
+      [serviceJobId, technicianId]
+    );
+
+    if (existing.length > 0) {
+      throw new Error("Technician already assigned to this job");
+    }
+
+    // Assign technician
+    const [result] = await connection.query(
+      `INSERT INTO service_job_technician (serviceJobId, technicianId)
+      VALUES (?, ?)`,
+      [serviceJobId, technicianId]
+    );
+
+    // Get technician name for work log
+    const [tech] = await connection.query(`
+      SELECT CONCAT(u.firstName, ' ', u.lastName) AS technicianName
+      FROM technicians t
+      JOIN users u ON t.userId = u.userId
+      WHERE t.technicianId = ?
+    `, [technicianId]);
+
+    const technicianName = tech[0]?.technicianName || 'Unknown Technician';
+
+    // Add work log entry
+    await connection.query(
+      `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks, technicianId)
+      VALUES (?, 'Technician Assigned', ?, ?)`,
+      [serviceJobId, `Technician ${technicianName} assigned to job`, technicianId]
+    );
+
+    await connection.commit();
+
+    return { 
+      id: result.insertId, 
+      serviceJobId, 
+      technicianId,
+      assignedAt: new Date()
+    };
+
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 // Remove technician from service job
 async function removeTechnicianFromJob(serviceJobId, technicianId) {
-  await db.query(
-    "DELETE FROM service_job_technician WHERE serviceJobId = ? AND technicianId = ?",
-    [serviceJobId, technicianId]
-  );
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
 
-  return { message: "Technician removed from service job" };
+    // Get technician name before removal
+    const [tech] = await connection.query(`
+      SELECT CONCAT(u.firstName, ' ', u.lastName) AS technicianName
+      FROM technicians t
+      JOIN users u ON t.userId = u.userId
+      WHERE t.technicianId = ?
+    `, [technicianId]);
+
+    const technicianName = tech[0]?.technicianName || 'Unknown Technician';
+
+    // Remove technician
+    await connection.query(
+      "DELETE FROM service_job_technician WHERE serviceJobId = ? AND technicianId = ?",
+      [serviceJobId, technicianId]
+    );
+
+    // Add work log entry
+    await connection.query(
+      `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks)
+      VALUES (?, 'Technician Removed', ?)`,
+      [serviceJobId, `Technician ${technicianName} removed from job`]
+    );
+
+    await connection.commit();
+
+    return { message: "Technician removed from service job" };
+
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 // Get technicians for service job
@@ -445,12 +632,12 @@ async function getServiceJobTechnicians(serviceJobId) {
 
 // Add work log to service job
 async function addWorkLogToJob(serviceJobId, workLogData) {
-  const { workDescription, remarks } = workLogData;
+  const { workDescription, remarks, technicianId = null } = workLogData;
 
   const [result] = await db.query(
-    `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks)
-    VALUES (?, ?, ?)`,
-    [serviceJobId, workDescription, remarks]
+    `INSERT INTO service_job_worklog (serviceJobId, workDescription, remarks, technicianId)
+    VALUES (?, ?, ?, ?)`,
+    [serviceJobId, workDescription, remarks, technicianId]
   );
 
   return { 
@@ -458,6 +645,7 @@ async function addWorkLogToJob(serviceJobId, workLogData) {
     serviceJobId, 
     workDescription, 
     remarks,
+    technicianId,
     workDate: new Date()
   };
 }
@@ -469,9 +657,15 @@ async function getServiceJobWorkLogs(serviceJobId) {
       worklogId,
       workDescription,
       workDate,
-      remarks
-    FROM service_job_worklog
-    WHERE serviceJobId = ?
+      DATE_FORMAT(workDate, '%Y-%m-%d') AS formattedDate,
+      DATE_FORMAT(workDate, '%h:%i %p') AS formattedTime,
+      remarks,
+      technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName
+    FROM service_job_worklog wl
+    LEFT JOIN technicians t ON wl.technicianId = t.technicianId
+    LEFT JOIN users u ON t.userId = u.userId
+    WHERE wl.serviceJobId = ?
     ORDER BY workDate DESC
   `, [serviceJobId]);
   return rows;
@@ -488,10 +682,21 @@ async function updateWorkLog(workLogId, workLogData) {
     [workDescription, remarks, workLogId]
   );
 
-  const [rows] = await db.query(
-    "SELECT * FROM service_job_worklog WHERE worklogId = ?",
-    [workLogId]
-  );
+  const [rows] = await db.query(`
+    SELECT 
+      worklogId,
+      workDescription,
+      workDate,
+      DATE_FORMAT(workDate, '%Y-%m-%d') AS formattedDate,
+      DATE_FORMAT(workDate, '%h:%i %p') AS formattedTime,
+      remarks,
+      technicianId,
+      CONCAT(u.firstName, ' ', u.lastName) AS technicianName
+    FROM service_job_worklog wl
+    LEFT JOIN technicians t ON wl.technicianId = t.technicianId
+    LEFT JOIN users u ON t.userId = u.userId
+    WHERE wl.worklogId = ?
+  `, [workLogId]);
   
   return rows[0] || null;
 }
@@ -514,8 +719,12 @@ async function getServiceJobsByStatus(status) {
       CONCAT('SJ-', LPAD(sj.serviceJobId, 4, '0')) AS serviceJobNumber,
       q.quotationNumber,
       q.customerName,
+      q.customerEmail,
+      q.customerPhone,
+      q.workTimeEstimation,
       COALESCE(v.plateNumber, sj.guestPlateNumber) AS displayPlateNumber,
-      COALESCE(v.brand, sj.guestBrand) AS displayBrand
+      COALESCE(v.brand, sj.guestBrand) AS displayBrand,
+      GROUP_CONCAT(DISTINCT CONCAT(ut.firstName, ' ', ut.lastName) SEPARATOR ', ') AS assignedTechnicians
     FROM service_job sj
     LEFT JOIN (
       SELECT 
@@ -525,7 +734,18 @@ async function getServiceJobsByStatus(status) {
           WHEN serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
           WHEN customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
           ELSE guestName
-        END AS customerName
+        END AS customerName,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN sr_cu.email
+          WHEN customerId IS NOT NULL THEN uc.email
+          ELSE q.guestEmail
+        END AS customerEmail,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN sr_cu.contactNumber
+          WHEN customerId IS NOT NULL THEN uc.contactNumber
+          ELSE q.guestContact
+        END AS customerPhone,
+        q.workTimeEstimation
       FROM quotation q
       LEFT JOIN serviceRequestBooking srb ON q.serviceRequestId = srb.serviceRequestId
       LEFT JOIN customers sr_c ON srb.customerId = sr_c.customerId
@@ -534,7 +754,11 @@ async function getServiceJobsByStatus(status) {
       LEFT JOIN users uc ON c.userId = uc.userId
     ) q ON sj.quotationId = q.quotationId
     LEFT JOIN vehicle v ON sj.vehicleId = v.vehicleId
+    LEFT JOIN service_job_technician sjt ON sj.serviceJobId = sjt.serviceJobId
+    LEFT JOIN technicians t ON sjt.technicianId = t.technicianId
+    LEFT JOIN users ut ON t.userId = ut.userId
     WHERE sj.status = ?
+    GROUP BY sj.serviceJobId
     ORDER BY sj.updatedAt DESC
   `, [status]);
   return rows;
@@ -548,6 +772,7 @@ async function getServiceJobsByTechnician(technicianId) {
       CONCAT('SJ-', LPAD(sj.serviceJobId, 4, '0')) AS serviceJobNumber,
       q.quotationNumber,
       q.customerName,
+      q.workTimeEstimation,
       COALESCE(v.plateNumber, sj.guestPlateNumber) AS displayPlateNumber,
       sjt.assignedAt
     FROM service_job sj
@@ -560,7 +785,8 @@ async function getServiceJobsByTechnician(technicianId) {
           WHEN serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
           WHEN customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
           ELSE guestName
-        END AS customerName
+        END AS customerName,
+        q.workTimeEstimation
       FROM quotation q
       LEFT JOIN serviceRequestBooking srb ON q.serviceRequestId = srb.serviceRequestId
       LEFT JOIN customers sr_c ON srb.customerId = sr_c.customerId
@@ -574,6 +800,118 @@ async function getServiceJobsByTechnician(technicianId) {
   `, [technicianId]);
   return rows;
 }
+
+// Search service jobs
+async function searchServiceJobs(searchTerm, statusFilter = 'All') {
+  let query = `
+    SELECT 
+      sj.*,
+      CONCAT('SJ-', LPAD(sj.serviceJobId, 4, '0')) AS serviceJobNumber,
+      q.quotationNumber,
+      q.customerName,
+      q.customerEmail,
+      q.customerPhone,
+      q.customerAddress,
+      q.workTimeEstimation,
+      COALESCE(v.plateNumber, sj.guestPlateNumber) AS displayPlateNumber,
+      COALESCE(v.brand, sj.guestBrand) AS displayBrand,
+      COALESCE(v.model, sj.guestModel) AS displayModel,
+      GROUP_CONCAT(DISTINCT CONCAT(ut.firstName, ' ', ut.lastName) SEPARATOR ', ') AS assignedTechnicians
+    FROM service_job sj
+    LEFT JOIN (
+      SELECT 
+        quotationId,
+        CONCAT('QTN-', LPAD(quotationId, 4, '0')) AS quotationNumber,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
+          WHEN customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
+          ELSE guestName
+        END AS customerName,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN sr_cu.email
+          WHEN customerId IS NOT NULL THEN uc.email
+          ELSE q.guestEmail
+        END AS customerEmail,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN sr_cu.contactNumber
+          WHEN customerId IS NOT NULL THEN uc.contactNumber
+          ELSE q.guestContact
+        END AS customerPhone,
+        CASE 
+          WHEN serviceRequestId IS NOT NULL THEN sr_cu.address
+          WHEN customerId IS NOT NULL THEN uc.address
+          ELSE NULL
+        END AS customerAddress,
+        q.workTimeEstimation
+      FROM quotation q
+      LEFT JOIN serviceRequestBooking srb ON q.serviceRequestId = srb.serviceRequestId
+      LEFT JOIN customers sr_c ON srb.customerId = sr_c.customerId
+      LEFT JOIN users sr_cu ON sr_c.userId = sr_cu.userId
+      LEFT JOIN customers c ON q.customerId = c.customerId
+      LEFT JOIN users uc ON c.userId = uc.userId
+    ) q ON sj.quotationId = q.quotationId
+    LEFT JOIN vehicle v ON sj.vehicleId = v.vehicleId
+    LEFT JOIN service_job_technician sjt ON sj.serviceJobId = sjt.serviceJobId
+    LEFT JOIN technicians t ON sjt.technicianId = t.technicianId
+    LEFT JOIN users ut ON t.userId = ut.userId
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  if (searchTerm) {
+    query += ` AND (
+      q.customerName LIKE ? OR 
+      sj.serviceJobNumber LIKE ? OR
+      q.customerEmail LIKE ? OR
+      q.customerPhone LIKE ? OR
+      q.customerAddress LIKE ? OR
+      COALESCE(v.plateNumber, sj.guestPlateNumber) LIKE ? OR
+      COALESCE(v.brand, sj.guestBrand) LIKE ?
+    )`;
+    const searchParam = `%${searchTerm}%`;
+    params.push(
+      searchParam, searchParam, searchParam, searchParam, 
+      searchParam, searchParam, searchParam
+    );
+  }
+
+  if (statusFilter !== 'All') {
+    query += ` AND sj.status = ?`;
+    params.push(statusFilter);
+  }
+
+  query += ` GROUP BY sj.serviceJobId ORDER BY sj.createdAt DESC`;
+
+  const [rows] = await db.query(query, params);
+  return rows;
+}
+
+// Get service job summary counts
+async function getServiceJobSummary() {
+  const [rows] = await db.query(`
+    SELECT 
+      COUNT(*) as total,
+      SUM(sj.status = 'Checked In') as checkedIn,
+      SUM(sj.status = 'Repair') as repair,
+      SUM(sj.status = 'Testing') as testing,
+      SUM(sj.status = 'Completion') as completion,
+      SUM(assigned_count = 0) as unassigned
+    FROM (
+      SELECT 
+        sj.status,
+        COUNT(sjt.technicianId) as assigned_count
+      FROM service_job sj
+      LEFT JOIN service_job_technician sjt ON sj.serviceJobId = sjt.serviceJobId
+      GROUP BY sj.serviceJobId
+    ) AS job_counts
+  `);
+  return rows[0];
+}
+
+
+
+
 
 module.exports = {
   getAllServiceJobs,
@@ -590,5 +928,8 @@ module.exports = {
   updateWorkLog,
   deleteWorkLog,
   getServiceJobsByStatus,
-  getServiceJobsByTechnician
+  getServiceJobsByTechnician,
+  searchServiceJobs,
+  getServiceJobSummary,
+   
 };

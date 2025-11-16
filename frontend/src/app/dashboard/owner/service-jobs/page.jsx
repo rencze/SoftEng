@@ -1,204 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   FaSearch, 
-  FaCalendarAlt, 
-  FaTools,
   FaHistory,
   FaArrowLeft,
   FaCheck,
-  FaClock,
+  FaTools,
+  FaSyncAlt,
   FaUserPlus,
-  FaPlus,
-  FaTimes,
-  FaEye,
-  FaMapMarkerAlt,
-  FaPhone,
-  FaEnvelope,
-  FaUser,
-  FaInfoCircle,
-  FaUsers,
-  FaEdit,
-  FaTrash,
-  FaSyncAlt
+  FaPlus
 } from "react-icons/fa";
 import ServiceJobsTable from "@/components/Technician/ServiceJob/ServiceJobsTable";
 import ServiceJobHistoryTable from "@/components/Technician/ServiceJob/ServiceJobHistoryTable";
 import CreateServiceJobModal from "@/components/Technician/ServiceJob/CreateServiceJobModal";
+import ServiceJobViewModal from "@/components/Technician/ServiceJob/ServiceJobViewModal";
+import ServiceAssignModal from "@/components/Technician/ServiceJob/ServiceAssignModal";
+import ServiceStatusModal from "@/components/Technician/ServiceJob/ServiceStatusModal";
 
 export default function ServiceJobOverviewPage() {
-  // Available service types
-  const serviceTypes = [
-    "AC Repair",
-    "Heating System",
-    "Maintenance",
-    "Emergency Repair",
-    "Installation",
-    "Electrical Repair",
-    "Plumbing",
-    "Brake Service",
-    "Oil Change",
-    "Tire Replacement",
-    "Battery Replacement",
-    "Engine Diagnostic",
-    "Transmission Repair",
-    "Suspension Repair",
-    "Air Conditioning Service"
-  ];
-
-  const [serviceJobs, setServiceJobs] = useState([
-    {
-      id: 1,
-      jobNumber: "SB-0001",
-      customerName: "John Smith",
-      customerPhone: "+1 (555) 123-4567",
-      customerEmail: "john.smith@email.com",
-      serviceType: ["AC Repair", "Maintenance"],
-      description: "AC not cooling properly, making strange noises. Regular maintenance check included.",
-      status: "Checked In",
-      createdAt: "2024-01-15",
-      scheduledDate: "2024-01-20",
-      address: "123 Main St, Apt 4B, New York, NY 10001",
-      assignedTechnicians: ["Mike Wilson", "Lisa Garcia"],
-      estimatedDuration: "2-3 hours",
-      // REMOVED: specialRequirements
-      notes: "Customer prefers morning appointment",
-      workLog: [
-        {
-          id: 1,
-          date: "2024-01-15",
-          time: "10:30 AM",
-          action: "Job Created",
-          technician: "System",
-          notes: "Service request converted to job"
-        }
-      ]
-    },
-    {
-      id: 2,
-      jobNumber: "SB-0002",
-      customerName: "Sarah Johnson",
-      customerPhone: "+1 (555) 987-6543",
-      customerEmail: "sarah.j@email.com",
-      serviceType: ["Heating System", "Emergency Repair"],
-      description: "Furnace not turning on, pilot light issue suspected. Emergency heating repair needed.",
-      status: "Repair",
-      createdAt: "2024-01-14",
-      scheduledDate: "2024-01-16",
-      address: "456 Oak Avenue, Brooklyn, NY 11201",
-      assignedTechnicians: ["David Lee"],
-      estimatedDuration: "1-2 hours",
-      // REMOVED: specialRequirements
-      notes: "Customer available after 2 PM",
-      workLog: [
-        {
-          id: 1,
-          date: "2024-01-14",
-          time: "09:15 AM",
-          action: "Job Created",
-          technician: "System",
-          notes: "Service request converted to job"
-        },
-        {
-          id: 2,
-          date: "2024-01-16",
-          time: "02:05 PM",
-          action: "Work Started",
-          technician: "Lisa Garcia",
-          notes: "Arrived on site, beginning diagnostics"
-        }
-      ]
-    },
-    {
-      id: 3,
-      jobNumber: "SB-0003",
-      customerName: "Robert Chen",
-      customerPhone: "+1 (555) 456-7890",
-      customerEmail: "r.chen@email.com",
-      serviceType: ["Maintenance", "Oil Change", "Brake Service"],
-      description: "Regular seasonal maintenance for HVAC system. Includes oil change and brake inspection.",
-      status: "Testing",
-      createdAt: "2024-01-10",
-      scheduledDate: "2024-01-13",
-      address: "789 Park Lane, Queens, NY 11355",
-      assignedTechnicians: ["David Lee", "Tom Anderson"],
-      estimatedDuration: "3 hours",
-      // REMOVED: specialRequirements
-      notes: "System check completed, all parts replaced",
-      workLog: [
-        {
-          id: 1,
-          date: "2024-01-10",
-          time: "08:45 AM",
-          action: "Job Created",
-          technician: "System",
-          notes: "Service request converted to job"
-        },
-        {
-          id: 2,
-          date: "2024-01-13",
-          time: "11:10 AM",
-          action: "Work Started",
-          technician: "David Lee",
-          notes: "Beginning maintenance procedure"
-        },
-        {
-          id: 3,
-          date: "2024-01-13",
-          time: "12:05 PM",
-          action: "Status Updated to Testing",
-          technician: "David Lee",
-          notes: "Maintenance completed, beginning testing phase"
-        }
-      ]
-    },
-    {
-      id: 4,
-      jobNumber: "SB-0004",
-      customerName: "Maria Garcia",
-      customerPhone: "+1 (555) 234-5678",
-      customerEmail: "maria.g@email.com",
-      serviceType: ["Emergency Repair", "Electrical Repair"],
-      description: "No cooling during heat wave, urgent repair needed. Electrical system inspection required.",
-      status: "Completion",
-      createdAt: "2024-01-16",
-      scheduledDate: "2024-01-17",
-      address: "321 Pine Street, Bronx, NY 10458",
-      assignedTechnicians: [],
-      estimatedDuration: "3-4 hours",
-      // REMOVED: specialRequirements
-      notes: "Waiting for parts delivery",
-      workLog: [
-        {
-          id: 1,
-          date: "2024-01-16",
-          time: "03:20 PM",
-          action: "Job Created",
-          technician: "System",
-          notes: "Emergency service request"
-        },
-        {
-          id: 2,
-          date: "2024-01-16",
-          time: "04:15 PM",
-          action: "Status Updated to Completion",
-          technician: "System",
-          notes: "Repair completed, finalizing documentation"
-        }
-      ]
-    }
-  ]);
-
-  // Updated technicians without specialty and status
-  const [technicians, setTechnicians] = useState([
-    { id: 1, name: "Mike Wilson" },
-    { id: 2, name: "Lisa Garcia" },
-    { id: 3, name: "David Lee" },
-    { id: 4, name: "Tom Anderson" },
-    { id: 5, name: "Sarah Johnson" }
-  ]);
-
+  const [serviceJobs, setServiceJobs] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [search, setSearch] = useState("");
@@ -207,16 +30,28 @@ export default function ServiceJobOverviewPage() {
   const [isUpdateStatusModalOpen, setIsUpdateStatusModalOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isJobSettingsModalOpen, setIsJobSettingsModalOpen] = useState(false);
 
+  // Get authentication token
+  const getAuthToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    // Fetch functions would be called here
+    setLoading(false);
+  }, []);
+
+  // Filter jobs based on status
   const activeJobs = serviceJobs.filter(job => 
     ["Checked In", "Repair", "Testing"].includes(job.status)
   );
 
   const historyJobs = serviceJobs.filter(job => 
-    ["Completion"].includes(job.status)
+    ["Completion", "Completed", "Cancelled"].includes(job.status)
   );
 
+  // Filter jobs based on search
   const filteredActiveJobs = activeJobs.filter((job) => {
     const matchesSearch = 
       job.customerName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -243,118 +78,32 @@ export default function ServiceJobOverviewPage() {
     return matchesSearch;
   });
 
+  // Calculate counts
   const checkedInCount = serviceJobs.filter(j => j.status === "Checked In").length;
   const repairCount = serviceJobs.filter(j => j.status === "Repair").length;
   const testingCount = serviceJobs.filter(j => j.status === "Testing").length;
-  const completionCount = serviceJobs.filter(j => j.status === "Completion").length;
+  const completionCount = serviceJobs.filter(j => ["Completion", "Completed"].includes(j.status)).length;
   const unassignedCount = serviceJobs.filter(j => !j.assignedTechnicians || j.assignedTechnicians.length === 0).length;
 
-  const handleAssignment = (jobId, assignedTechnicians) => {
-    setServiceJobs(prev => 
-      prev.map(job => 
-        job.id === jobId 
-          ? { 
-              ...job, 
-              assignedTechnicians: assignedTechnicians,
-              workLog: [
-                ...job.workLog,
-                {
-                  id: job.workLog.length + 1,
-                  date: new Date().toISOString().split('T')[0],
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  action: "Technicians Updated",
-                  technician: "System",
-                  notes: `Assigned technicians: ${assignedTechnicians.join(', ')}`
-                }
-              ]
-            }
-          : job
-      )
-    );
+  // Handle technician assignment
+  const handleAssignment = async (jobId, assignedTechnicians) => {
+    // Assignment logic would be here
     setIsAssignmentModalOpen(false);
   };
 
-  const handleUpdateStatus = (jobId, newStatus, notes = "") => {
-    setServiceJobs(prev => 
-      prev.map(job => 
-        job.id === jobId 
-          ? { 
-              ...job, 
-              status: newStatus,
-              workLog: [
-                ...job.workLog,
-                {
-                  id: job.workLog.length + 1,
-                  date: new Date().toISOString().split('T')[0],
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  action: `Status Updated to ${newStatus}`,
-                  technician: "System",
-                  notes: notes || `Status changed to ${newStatus}`
-                }
-              ]
-            }
-          : job
-      )
-    );
+  // Handle status update
+  const handleUpdateStatus = async (jobId, newStatus, notes = "") => {
+    // Status update logic would be here
     setIsUpdateStatusModalOpen(false);
   };
 
-  const handleCreateServiceJob = (newJobData) => {
-    const newJob = {
-      id: Math.max(...serviceJobs.map(j => j.id)) + 1,
-      jobNumber: `SB-${String(Math.max(...serviceJobs.map(j => parseInt(j.jobNumber.split('-')[1]))) + 1).padStart(4, '0')}`,
-      ...newJobData,
-      status: "Checked In",
-      createdAt: new Date().toISOString().split('T')[0],
-      assignedTechnicians: [],
-      workLog: [
-        {
-          id: 1,
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: "Job Created",
-          technician: "System",
-          notes: "New service job created"
-        }
-      ]
-    };
-    
-    setServiceJobs(prev => [newJob, ...prev]);
+  // Handle creating new service job
+  const handleCreateServiceJob = async (newJobData) => {
+    // Create job logic would be here
     setIsCreateModalOpen(false);
   };
 
-  const handleUpdateJobSettings = (jobId, updatedData) => {
-    setServiceJobs(prev => 
-      prev.map(job => 
-        job.id === jobId 
-          ? { 
-              ...job, 
-              ...updatedData,
-              workLog: [
-                ...job.workLog,
-                {
-                  id: job.workLog.length + 1,
-                  date: new Date().toISOString().split('T')[0],
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  action: "Job Details Updated",
-                  technician: "System",
-                  notes: "Job settings modified"
-                }
-              ]
-            }
-          : job
-      )
-    );
-    setIsJobSettingsModalOpen(false);
-  };
-
-  const handleDeleteJob = (jobId) => {
-    if (window.confirm("Are you sure you want to delete this service job? This action cannot be undone.")) {
-      setServiceJobs(prev => prev.filter(job => job.id !== jobId));
-      setIsJobSettingsModalOpen(false);
-    }
-  };
-
+  // Modal handlers
   const openDetailModal = (job) => {
     setSelectedJob(job);
     setIsDetailModalOpen(true);
@@ -372,6 +121,7 @@ export default function ServiceJobOverviewPage() {
 
   const closeAssignmentModal = () => {
     setIsAssignmentModalOpen(false);
+    setSelectedJob(null);
   };
 
   const openUpdateStatusModal = (job) => {
@@ -381,6 +131,7 @@ export default function ServiceJobOverviewPage() {
 
   const closeUpdateStatusModal = () => {
     setIsUpdateStatusModalOpen(false);
+    setSelectedJob(null);
   };
 
   const openCreateModal = () => {
@@ -389,15 +140,6 @@ export default function ServiceJobOverviewPage() {
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
-  };
-
-  const openJobSettingsModal = (job) => {
-    setSelectedJob(job);
-    setIsJobSettingsModalOpen(true);
-  };
-
-  const closeJobSettingsModal = () => {
-    setIsJobSettingsModalOpen(false);
   };
 
   const SummaryCard = ({ title, count, icon: Icon, color, description }) => {
@@ -428,6 +170,15 @@ export default function ServiceJobOverviewPage() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Loading service jobs...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {isCreateModalOpen && (
@@ -435,19 +186,18 @@ export default function ServiceJobOverviewPage() {
           onClose={closeCreateModal}
           onCreate={handleCreateServiceJob}
           technicians={technicians}
-          serviceTypes={serviceTypes}
         />
       )}
 
       {isDetailModalOpen && selectedJob && (
-        <ViewJobDetailsModal
+        <ServiceJobViewModal
           job={selectedJob}
           onClose={closeDetailModal}
         />
       )}
 
       {isUpdateStatusModalOpen && selectedJob && (
-        <UpdateJobStatusModal
+        <ServiceStatusModal
           job={selectedJob}
           onClose={closeUpdateStatusModal}
           onUpdateStatus={handleUpdateStatus}
@@ -455,21 +205,11 @@ export default function ServiceJobOverviewPage() {
       )}
 
       {isAssignmentModalOpen && selectedJob && (
-        <AssignmentModal
+        <ServiceAssignModal
           job={selectedJob}
           technicians={technicians}
           onClose={closeAssignmentModal}
           onAssignment={handleAssignment}
-        />
-      )}
-
-      {isJobSettingsModalOpen && selectedJob && (
-        <JobSettingsModal
-          job={selectedJob}
-          onClose={closeJobSettingsModal}
-          onUpdate={handleUpdateJobSettings}
-          onDelete={handleDeleteJob}
-          serviceTypes={serviceTypes}
         />
       )}
 
@@ -597,7 +337,6 @@ export default function ServiceJobOverviewPage() {
             onViewDetails={openDetailModal}
             onAssignment={openAssignmentModal}
             onUpdateStatus={openUpdateStatusModal}
-            onJobSettings={openJobSettingsModal}
           />
         </div>
       )}
@@ -623,663 +362,3 @@ export default function ServiceJobOverviewPage() {
     </div>
   );
 }
-
-const ViewJobDetailsModal = ({ job, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Service Job Details</h2>
-              <p className="text-blue-100">{job.jobNumber}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-blue-200 transition-colors p-2"
-            >
-              <FaTimes size={24} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <FaUser className="mr-2 text-blue-600" />
-                Customer Information
-              </h3>
-              <div className="space-y-2">
-                <p><strong>Name:</strong> {job.customerName}</p>
-                <p className="flex items-center">
-                  <FaPhone className="mr-2 text-gray-400" />
-                  <strong>Phone:</strong> {job.customerPhone}
-                </p>
-                <p className="flex items-center">
-                  <FaEnvelope className="mr-2 text-gray-400" />
-                  <strong>Email:</strong> {job.customerEmail}
-                </p>
-                <p className="flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-gray-400" />
-                  <strong>Address:</strong> {job.address}
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <FaInfoCircle className="mr-2 text-blue-600" />
-                Job Details
-              </h3>
-              <div className="space-y-2">
-                <p><strong>Service Types:</strong></p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {Array.isArray(job.serviceType) ? (
-                    job.serviceType.map((service, index) => (
-                      <span 
-                        key={index}
-                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                      >
-                        {service}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {job.serviceType}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3"><strong>Status:</strong> 
-                  <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
-                    job.status === 'Checked In' ? 'bg-blue-100 text-blue-800' :
-                    job.status === 'Repair' ? 'bg-orange-100 text-orange-800' :
-                    job.status === 'Testing' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {job.status}
-                  </span>
-                </p>
-                <p>
-                  <strong>Assigned Technicians:</strong> 
-                  {job.assignedTechnicians && job.assignedTechnicians.length > 0 ? (
-                    <div className="mt-1 space-y-1">
-                      {job.assignedTechnicians.map((tech, index) => (
-                        <span key={index} className="block bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm">
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="ml-2 text-gray-500 italic">Unassigned</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold mb-2">Service Description</h3>
-            <p className="text-gray-700">{job.description}</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Schedule</h3>
-              <div className="space-y-2">
-                <p><strong>Date:</strong> {new Date(job.scheduledDate).toLocaleDateString()}</p>
-                <p><strong>Estimated Duration:</strong> {job.estimatedDuration}</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Additional Information</h3>
-              <div className="space-y-2">
-                {/* REMOVED: Special Requirements section */}
-                {job.notes && (
-                  <p><strong>Notes:</strong> {job.notes}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {job.workLog && job.workLog.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Work Log</h3>
-              <div className="space-y-3">
-                {job.workLog.map((log) => (
-                  <div key={log.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold text-gray-900">{log.action}</p>
-                        <p className="text-sm text-gray-600">{log.notes}</p>
-                      </div>
-                      <div className="text-right text-sm text-gray-500">
-                        <p>{new Date(log.date).toLocaleDateString()}</p>
-                        <p>{log.time}</p>
-                        <p className="text-xs">{log.technician}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const UpdateJobStatusModal = ({ job, onClose, onUpdateStatus }) => {
-  const [selectedStatus, setSelectedStatus] = useState(job.status);
-  const [notes, setNotes] = useState("");
-
-  const handleSubmit = () => {
-    onUpdateStatus(job.id, selectedStatus, notes);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Update Job Status</h2>
-              <p className="text-blue-100">{job.jobNumber}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-blue-200 transition-colors p-2"
-            >
-              <FaTimes size={24} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select New Status
-              </label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="Checked In">Checked In</option>
-                <option value="Repair">Repair</option>
-                <option value="Testing">Testing</option>
-                <option value="Completion">Completion</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows="3"
-                placeholder="Add any notes about the status change..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <FaTimes className="mr-2" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FaCheck className="mr-2" />
-              Update Status
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AssignmentModal = ({ job, technicians, onClose, onAssignment }) => {
-  const [assignedTechnicians, setAssignedTechnicians] = useState(job.assignedTechnicians || []);
-
-  const handleTechnicianToggle = (technicianName) => {
-    setAssignedTechnicians(prev => 
-      prev.includes(technicianName)
-        ? prev.filter(tech => tech !== technicianName)
-        : [...prev, technicianName]
-    );
-  };
-
-  const handleSubmit = () => {
-    onAssignment(job.id, assignedTechnicians);
-  };
-
-  const availableTechnicians = technicians.filter(tech => 
-    !assignedTechnicians.includes(tech.name)
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Manage Technician Assignment</h2>
-              <p className="text-blue-100">{job.jobNumber}</p>
-              <p className="text-blue-100 text-sm mt-1">
-                Services: {Array.isArray(job.serviceType) ? job.serviceType.join(', ') : job.serviceType}
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-blue-200 transition-colors p-2"
-            >
-              <FaTimes size={24} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
-                <FaInfoCircle className="mr-2" />
-                Job Details
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <p><strong>Customer:</strong> {job.customerName}</p>
-                <p><strong>Status:</strong> 
-                  <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
-                    job.status === 'Checked In' ? 'bg-blue-100 text-blue-800' :
-                    job.status === 'Repair' ? 'bg-orange-100 text-orange-800' :
-                    job.status === 'Testing' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {job.status}
-                  </span>
-                </p>
-                <p><strong>Schedule:</strong> {new Date(job.scheduledDate).toLocaleDateString()}</p>
-                <p><strong>Duration:</strong> {job.estimatedDuration}</p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
-                <FaUsers className="mr-2 text-blue-600" />
-                Currently Assigned Technicians ({assignedTechnicians.length})
-              </h4>
-              
-              {assignedTechnicians.length > 0 ? (
-                <div className="space-y-2">
-                  {assignedTechnicians.map((techName) => (
-                    <div
-                      key={techName}
-                      className="border border-green-200 bg-green-50 rounded-lg p-3 flex items-center justify-between"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{techName}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleTechnicianToggle(techName)}
-                        className="flex items-center px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors space-x-1"
-                      >
-                        <FaTimes className="text-xs" />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                  <FaUsers className="text-3xl text-gray-300 mx-auto mb-2" />
-                  <p>No technicians assigned</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
-                <FaUserPlus className="mr-2 text-blue-600" />
-                Available Technicians ({availableTechnicians.length})
-              </h4>
-              
-              {availableTechnicians.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                  {availableTechnicians.map((tech) => (
-                    <div
-                      key={tech.id}
-                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                        assignedTechnicians.includes(tech.name)
-                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => handleTechnicianToggle(tech.name)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{tech.name}</p>
-                          </div>
-                        </div>
-                      </div>
-                      {assignedTechnicians.includes(tech.name) && (
-                        <div className="mt-2 flex items-center text-blue-600 text-sm">
-                          <FaCheck className="mr-1" />
-                          Selected
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <FaUsers className="text-3xl text-gray-300 mx-auto mb-2" />
-                  <p>No available technicians</p>
-                </div>
-              )}
-            </div>
-
-            {assignedTechnicians.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-blue-800 font-medium">
-                  <FaUsers className="inline mr-2" />
-                  {assignedTechnicians.length} technician(s) will be assigned
-                </p>
-                <p className="text-sm text-blue-700 mt-1">
-                  {assignedTechnicians.join(', ')}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <FaTimes className="mr-2" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FaUserPlus className="mr-2" />
-              Save Assignment
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const JobSettingsModal = ({ job, onClose, onUpdate, onDelete, serviceTypes }) => {
-  const [formData, setFormData] = useState({
-    customerName: job.customerName,
-    customerPhone: job.customerPhone,
-    customerEmail: job.customerEmail,
-    serviceType: Array.isArray(job.serviceType) ? job.serviceType : [job.serviceType],
-    description: job.description,
-    scheduledDate: job.scheduledDate,
-    address: job.address,
-    estimatedDuration: job.estimatedDuration,
-    // REMOVED: specialRequirements
-    notes: job.notes || ""
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleServiceTypeChange = (service) => {
-    setFormData(prev => {
-      const currentServices = Array.isArray(prev.serviceType) ? prev.serviceType : [prev.serviceType];
-      const updatedServices = currentServices.includes(service)
-        ? currentServices.filter(s => s !== service)
-        : [...currentServices, service];
-      
-      return {
-        ...prev,
-        serviceType: updatedServices
-      };
-    });
-  };
-
-  const handleSubmit = () => {
-    onUpdate(job.id, formData);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Job Settings</h2>
-              <p className="text-purple-100">{job.jobNumber}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white hover:text-purple-200 transition-colors p-2"
-            >
-              <FaTimes size={24} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-                Customer Information
-              </h3>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer Name
-                </label>
-                <input
-                  type="text"
-                  name="customerName"
-                  value={formData.customerName}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer Phone
-                </label>
-                <input
-                  type="text"
-                  name="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer Email
-                </label>
-                <input
-                  type="email"
-                  name="customerEmail"
-                  value={formData.customerEmail}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address
-                </label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-                Job Details
-              </h3>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Service Types
-                </label>
-                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                  <div className="grid grid-cols-1 gap-2">
-                    {serviceTypes.map((service) => (
-                      <label key={service} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.serviceType.includes(service)}
-                          onChange={() => handleServiceTypeChange(service)}
-                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm text-gray-700">{service}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Selected: {formData.serviceType.length} service(s)
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Scheduled Date
-                </label>
-                <input
-                  type="date"
-                  name="scheduledDate"
-                  value={formData.scheduledDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estimated Duration
-                </label>
-                <input
-                  type="text"
-                  name="estimatedDuration"
-                  value={formData.estimatedDuration}
-                  onChange={handleChange}
-                  placeholder="e.g., 2-3 hours"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-              Additional Information
-            </h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                rows="2"
-                placeholder="Additional notes or customer preferences..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Danger Zone</h3>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-red-800">Delete this job</h4>
-                  <p className="text-sm text-red-600 mt-1">
-                    Once you delete a job, there is no going back. Please be certain.
-                  </p>
-                </div>
-                <button
-                  onClick={() => onDelete(job.id)}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  <FaTrash className="mr-2" />
-                  Delete Job
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 px-6 py-4 border-t">
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <FaTimes className="mr-2" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <FaCheck className="mr-2" />
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};

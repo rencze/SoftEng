@@ -76,7 +76,6 @@ const ServiceJobRow = ({
   onUpdateStatus,
   onJobSettings
 }) => {
-  // Function to truncate service types if too many
   const renderServiceTypes = (serviceTypes) => {
     if (!serviceTypes || serviceTypes.length === 0) {
       return <span className="text-gray-500 text-xs">No services</span>;
@@ -186,14 +185,6 @@ const ServiceJobRow = ({
             <FaSyncAlt className="text-xs" />
             <span>Status</span>
           </button>
-
-          <button
-            onClick={() => onJobSettings(job)}
-            className="flex items-center px-3 py-2 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-all duration-200 shadow-sm space-x-1 border border-gray-600 hover:border-gray-700"
-          >
-            <FaCog className="text-xs" />
-            <span>Settings</span>
-          </button>
         </div>
       </td>
     </tr>
@@ -209,22 +200,23 @@ const StatusBadge = ({ status }) => {
         return "bg-orange-100 text-orange-800 border-orange-200";
       case "Testing":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Completed":
       case "Completion":
         return "bg-green-100 text-green-800 border-green-200";
       case "Scheduled":
         return "bg-indigo-100 text-indigo-800 border-indigo-200";
       case "In Progress":
         return "bg-amber-100 text-amber-800 border-amber-200";
-      case "Completed":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
+  const displayStatus = status === "Completion" ? "Completed" : status;
+
   return (
     <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 ${getStatusStyles(status)}`}>
-      {status}
+      {displayStatus}
     </span>
   );
 };
