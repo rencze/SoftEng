@@ -18,6 +18,8 @@ const {
   fetchQuotationParts,
   fetchCustomerQuotations,
   fetchTechnicianQuotations,
+  checkExpiredQuotationsController,
+  getQuotationExpiryInfoController
 } = require("./quotation.controller");
 
 // 🔹 Static routes first
@@ -25,6 +27,10 @@ router.get("/", fetchQuotations);
 router.post("/", createQuotationController);
 router.get("/customer/:customerId", fetchCustomerQuotations);
 router.get("/technician/:technicianId", fetchTechnicianQuotations);
+
+// 🔹 Expiration routes
+router.get("/check/expired", checkExpiredQuotationsController);
+router.get("/:id/expiry", getQuotationExpiryInfoController);
 
 // 🔹 Quotation management routes
 router.get("/:id", fetchQuotation);

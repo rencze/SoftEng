@@ -11,7 +11,6 @@ export default function ConvertToQuotationServiceRequest({
   actionLoading 
 }) {
   const [formData, setFormData] = useState({
-    priorityLevel: "Medium",
     quotationDetails: "",
     laborCost: "",
     discount: 0,
@@ -31,14 +30,12 @@ export default function ConvertToQuotationServiceRequest({
   const [loading, setLoading] = useState({ parts: false });
   const [quotation, setQuotation] = useState({
     customParts: [],
-    // ...other fields
   });
 
   // Reset form when modal opens/closes or service request changes
   useEffect(() => {
     if (isOpen && serviceRequest) {
       setFormData({
-        priorityLevel: "Medium",
         quotationDetails: serviceRequest.notes || "", // Pre-fill with service request notes
         laborCost: "",
         discount: 0,
@@ -321,64 +318,185 @@ export default function ConvertToQuotationServiceRequest({
     };
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+// --- Convert to Quotation Function ---
+const handleConvertToQuotation = async (quotationData) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    // DEBUG: Log the incoming data to see what's being sent
+    console.log('🔍 DEBUG - Raw quotationData:', quotationData);
+    console.log('🔍 DEBUG - Services:', quotationData.services);
+    console.log('🔍 DEBUG - Service Packages:', quotationData.servicePackages);
 
-    // Validate that all services and packages have prices
-    const servicesWithoutPrice = editableServices.filter(service => 
-      service.estimatedPrice === "" || service.estimatedPrice === "0"
-    );
-    const packagesWithoutPrice = editablePackages.filter(pkg => 
-      pkg.estimatedPrice === "" || pkg.estimatedPrice === "0"
-    );
+    // Prepare services data - FIXED: Use correct field names
+    const servicesData = quotationData.services.map(service => ({
+      serviceId: service.servicesId || service.serviceId,
+      price: parseFloat(service.estimatedPrice) || 0,
+      quantity: service.quantity || 1
+    }));
 
-    if (servicesWithoutPrice.length > 0 || packagesWithoutPrice.length > 0) {
-      alert("Please enter prices for all services and packages before creating the quotation.");
-      return;
-    }
-
-    const totals = calculateTotals();
-
-    const quotationData = {
-      ...formData,
-      serviceRequestId: serviceRequest.serviceRequestId,
-      laborCost: formData.laborCost === "" ? 0 : parseFloat(formData.laborCost),
-      discount: parseFloat(formData.discount),
-      validityPeriod: parseInt(formData.validityPeriod),
-      services: editableServices.map(service => ({
-        serviceId: service.servicesId || service.serviceId,
-        serviceName: service.serviceName || service.servicesName,
-        quantity: service.quantity || 1,
-        estimatedPrice: service.estimatedPrice === "" ? 0 : parseFloat(service.estimatedPrice),
-        customPrice: service.customPrice
-      })),
-      servicePackages: editablePackages.map(pkg => ({
-        packageId: pkg.servicePackageId || pkg.packageId,
-        packageName: pkg.packageName,
-        quantity: pkg.quantity || 1,
-        estimatedPrice: pkg.estimatedPrice === "" ? 0 : parseFloat(pkg.estimatedPrice),
-        customPrice: pkg.customPrice
-      })),
-      customParts: quotation.customParts.map(part => ({
-        partId: part.partId,
-        partName: part.partName,
-        partDescription: part.partDescription,
-        unitPrice: part.unitPrice,
-        quantity: part.quantity || 1
-      })),
-      totals,
-      // Include customer information for quotation
-      customerInfo: {
-        customerId: serviceRequest.customerId,
-        customerName: serviceRequest.customerName,
-        customerEmail: serviceRequest.customerEmail,
-        customerPhone: serviceRequest.customerPhone,
-        address: serviceRequest.address
+    // Prepare packages data - FIXED: Ensure servicePackageId is properly set
+    const packagesData = quotationData.servicePackages.map(pkg => {
+      // Debug each package
+      console.log('🔍 DEBUG - Processing package:', pkg);
+      
+      // Get the servicePackageId - try different possible field names
+      const servicePackageId = pkg.servicePackageId || pkg.packageId;
+      
+      if (!servicePackageId) {
+        console.error('❌ ERROR - Missing servicePackageId for package:', pkg);
+        throw new Error(`Service package ID is missing for package: ${pkg.packageName}`);
       }
+
+      return {
+        servicePackageId: servicePackageId,
+        price: parseFloat(pkg.estimatedPrice) || 0,
+        quantity: pkg.quantity || 1
+      };
+    });
+
+    // Prepare the data for the quotation creation
+    const quotationPayload = {
+      serviceRequestId: serviceRequest.serviceRequestId,
+      customerId: serviceRequest.customerId,
+      customerName: serviceRequest.customerName,
+      email: serviceRequest.customerEmail,
+      phone: serviceRequest.customerPhone,
+      laborCost: parseFloat(quotationData.laborCost) || 0,
+      discount: parseFloat(quotationData.discount) || 0,
+      quote: quotationData.quotationDetails,
+      validity: parseInt(quotationData.validityPeriod) || 30,
+      status: 'Pending',
+      services: servicesData,
+      servicePackages: packagesData,
+      customParts: quotationData.customParts.map(part => ({
+        partId: part.partId,
+        quantity: part.quantity || 1,
+        unitPrice: parseFloat(part.unitPrice) || 0
+      }))
     };
 
-    onConvert(quotationData);
+    console.log('🚀 Creating quotation with payload:', quotationPayload);
+
+    const response = await fetch('http://localhost:3001/api/quotations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(quotationPayload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Backend error response:', errorData);
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Quotation created successfully:', result);
+
+    // Call the parent's onConvert function with the result
+    if (onConvert) {
+      onConvert(result);
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error creating quotation:', error);
+    alert(`Failed to create quotation: ${error.message}`);
+    throw error;
+  }
+};
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // Validate that all services and packages have prices
+  const servicesWithoutPrice = editableServices.filter(service => 
+    service.estimatedPrice === "" || service.estimatedPrice === "0" || isNaN(parseFloat(service.estimatedPrice))
+  );
+  
+  const packagesWithoutPrice = editablePackages.filter(pkg => 
+    pkg.estimatedPrice === "" || pkg.estimatedPrice === "0" || isNaN(parseFloat(pkg.estimatedPrice))
+  );
+
+  if (servicesWithoutPrice.length > 0 || packagesWithoutPrice.length > 0) {
+    alert("Please enter valid prices for all services and packages before creating the quotation.");
+    return;
+  }
+
+  // Validate that at least one service, package, or part is added
+  if (editableServices.length === 0 && editablePackages.length === 0 && quotation.customParts.length === 0 && !formData.laborCost) {
+    alert("Please add at least one service, package, custom part, or labor cost before creating the quotation.");
+    return;
+  }
+
+  const totals = calculateTotals();
+
+  // Prepare the data with proper field names
+  const quotationData = {
+    ...formData,
+    serviceRequestId: serviceRequest.serviceRequestId,
+    laborCost: formData.laborCost === "" ? 0 : parseFloat(formData.laborCost),
+    discount: parseFloat(formData.discount),
+    validityPeriod: parseInt(formData.validityPeriod),
+    services: editableServices.map(service => ({
+      // Ensure we have the correct ID field
+      servicesId: service.servicesId || service.serviceId,
+      serviceId: service.servicesId || service.serviceId, // Include both for compatibility
+      serviceName: service.serviceName || service.servicesName,
+      quantity: service.quantity || 1,
+      estimatedPrice: service.estimatedPrice === "" ? 0 : parseFloat(service.estimatedPrice),
+      customPrice: service.customPrice
+    })),
+    servicePackages: editablePackages.map(pkg => ({
+      // Ensure we have the correct ID field
+      servicePackageId: pkg.servicePackageId || pkg.packageId,
+      packageId: pkg.servicePackageId || pkg.packageId, // Include both for compatibility
+      packageName: pkg.packageName,
+      quantity: pkg.quantity || 1,
+      estimatedPrice: pkg.estimatedPrice === "" ? 0 : parseFloat(pkg.estimatedPrice),
+      customPrice: pkg.customPrice
+    })),
+    customParts: quotation.customParts.map(part => ({
+      partId: part.partId,
+      partName: part.partName,
+      partDescription: part.partDescription,
+      unitPrice: part.unitPrice,
+      quantity: part.quantity || 1
+    })),
+    totals
   };
+
+  console.log('📤 Final quotation data being sent:', quotationData);
+
+  try {
+    // Call the conversion function
+    await handleConvertToQuotation(quotationData);
+    // Close the modal after successful conversion
+    onClose();
+  } catch (error) {
+    // Error is already handled in handleConvertToQuotation
+  }
+};
+
+// Add this useEffect for debugging
+useEffect(() => {
+  console.log('🔍 DEBUG - Current editablePackages:', editablePackages);
+  if (editablePackages.length > 0) {
+    editablePackages.forEach((pkg, index) => {
+      console.log(`🔍 Package ${index}:`, {
+        id: pkg.id,
+        servicePackageId: pkg.servicePackageId,
+        packageId: pkg.packageId,
+        packageName: pkg.packageName,
+        estimatedPrice: pkg.estimatedPrice
+      });
+    });
+  }
+}, [editablePackages]);
 
   if (!isOpen || !serviceRequest) return null;
 
@@ -827,38 +945,19 @@ export default function ConvertToQuotationServiceRequest({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Priority Level
-                    </label>
-                    <select 
-                      name="priorityLevel"
-                      value={formData.priorityLevel}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Validity Period (Days)
-                    </label>
-                    <input
-                      type="number"
-                      name="validityPeriod"
-                      value={formData.validityPeriod}
-                      onChange={handleInputChange}
-                      min="1"
-                      max="365"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Validity Period (Days)
+                  </label>
+                  <input
+                    type="number"
+                    name="validityPeriod"
+                    value={formData.validityPeriod}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="365"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
 
                 <div>

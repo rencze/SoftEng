@@ -1,99 +1,65 @@
 "use client";
 
-import { FaSort, FaEdit, FaTrash, FaCheck, FaTimes, FaEye } from "react-icons/fa";
+import { 
+  FaEye, 
+  FaUserPlus, 
+  FaEdit, 
+  FaMapMarkerAlt,
+  FaCheck,
+  FaTimes,
+  FaSyncAlt,
+  FaUsers,
+  FaCog
+} from "react-icons/fa";
 
-const QuotationTable = ({
-  quotations,
-  sortConfig,
-  onSort,
-  onApprove,
-  onDelete,
-  onReject,
-  onView 
+const ServiceJobsTable = ({ 
+  jobs, 
+  onViewDetails, 
+  onAssignment, 
+  onUpdateStatus,
+  onJobSettings
 }) => {
-  const handleSort = (key) => {
-    onSort(key);
-  };
-
-  const sortedQuotations = [...quotations].sort((a, b) => {
-    if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
-
-    if (sortConfig.key === "createdAt") {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
-    }
-
-    if (sortConfig.key === "totalCost") {
-      return sortConfig.direction === "asc" 
-        ? (a.totalCost || 0) - (b.totalCost || 0)
-        : (b.totalCost || 0) - (a.totalCost || 0);
-    }
-
-    const valA = a[sortConfig.key]?.toString().toLowerCase() || '';
-    const valB = b[sortConfig.key]?.toString().toLowerCase() || '';
-
-    return sortConfig.direction === "asc"
-      ? valA.localeCompare(valB)
-      : valB.localeCompare(valA);
-  });
-
-  const columns = [
-    { label: "Quotation Details", key: "quotationNumber" },
-    { label: "Customer", key: "customerName" },
-    { label: "Amount", key: "totalCost" },
-    { label: "Status", key: "status" },
-    { label: "Date", key: "createdAt" },
-    { label: "Actions", key: "actions" },
-  ];
-
-  // Helper function to get customer name
-  const getCustomerName = (quotation) => {
-    return quotation.displayName || quotation.customerName || 'Unknown Customer';
-  };
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 text-sm">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            {columns.map(({ label, key }) => (
-              <th
-                key={key}
-                onClick={key !== "actions" ? () => handleSort(key) : undefined}
-                className={`px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider ${
-                  key !== "actions" ? "cursor-pointer hover:bg-gray-100" : ""
-                }`}
-              >
-                <div className="flex items-center">
-                  {label}
-                  {key !== "actions" && <FaSort className="ml-1 text-gray-400" />}
-                </div>
-              </th>
-            ))}
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Job Details
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Service Types
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Schedule
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Technician
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
           </tr>
         </thead>
-
         <tbody className="divide-y divide-gray-200">
-          {sortedQuotations.length > 0 ? (
-            sortedQuotations.map((quotation) => (
-              <QuotationTableRow
-                key={quotation.quotationId}
-                quotation={quotation}
-                onApprove={onApprove}
-                onDelete={onDelete}
-                onReject={onReject}
-                onView={onView}  // ADD THIS LINE - Pass onView prop
-                getCustomerName={getCustomerName}
+          {jobs.length > 0 ? (
+            jobs.map((job) => (
+              <ServiceJobRow
+                key={job.id}
+                job={job}
+                onViewDetails={onViewDetails}
+                onAssignment={onAssignment}
+                onUpdateStatus={onUpdateStatus}
+                onJobSettings={onJobSettings}
               />
             ))
           ) : (
             <tr>
-              <td
-                colSpan="6"
-                className="text-center py-12 text-gray-500 text-sm"
-              >
-                No active quotations found
+              <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                No active service jobs found
               </td>
             </tr>
           )}
@@ -103,128 +69,125 @@ const QuotationTable = ({
   );
 };
 
-// QuotationTableRow Component - UPDATED
-const QuotationTableRow = ({ quotation, onApprove, onDelete, onReject, onView, getCustomerName, getCustomerEmail }) => {
+const ServiceJobRow = ({ 
+  job, 
+  onViewDetails, 
+  onAssignment, 
+  onUpdateStatus,
+  onJobSettings
+}) => {
   return (
-    <tr className="hover:bg-gray-50 transition-all duration-200">
-      <td className="px-6 py-4 whitespace-nowrap">
+    <tr className="hover:bg-gray-50 transition-colors">
+      <td className="px-6 py-4">
         <div>
-          <div className="font-semibold text-gray-900">
-            {quotation.quotationNumber || `QTN-${quotation.quotationId}`}
+          <div className="font-bold text-gray-900">{job.jobNumber}</div>
+          <div className="font-medium text-gray-900">{job.customerName}</div>
+          <div className="text-sm text-gray-500 flex items-center">
+            <FaMapMarkerAlt className="mr-1 text-xs" />
+            {job.address.split(',')[0]}
           </div>
-          {quotation.bookingNumber && (
-            <div className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block mt-1">
-              {quotation.bookingNumber}
-            </div>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex flex-wrap gap-1">
+          {Array.isArray(job.serviceType) ? (
+            job.serviceType.map((service, index) => (
+              <span 
+                key={index}
+                className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium"
+              >
+                {service}
+              </span>
+            ))
+          ) : (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+              {job.serviceType}
+            </span>
           )}
         </div>
+        <div className="text-sm text-gray-500 truncate max-w-xs mt-1">{job.description}</div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div>
-          <div className="font-medium text-gray-900">
-            {getCustomerName(quotation)}
-          </div>
-          <div className="text-sm text-gray-500">
-            {getCustomerEmail(quotation)}
-          </div>
-          <div className="text-xs text-gray-400">
-            {getCustomerPhone(quotation)}
-          </div>
+      <td className="px-6 py-4">
+        <div className="text-sm text-gray-900">
+          {new Date(job.scheduledDate).toLocaleDateString()}
         </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-        ₱{quotation.totalCost?.toFixed(2) || '0.00'}
+      <td className="px-6 py-4">
+        {job.assignedTechnicians && job.assignedTechnicians.length > 0 ? (
+          <div className="space-y-1">
+            {job.assignedTechnicians.map((tech, index) => (
+              <div key={index} className="flex items-center">
+                <span className="text-sm font-medium text-gray-900">{tech}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-500 italic">Unassigned</span>
+        )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <QuotationStatusBadge status={quotation.status} />
+      <td className="px-6 py-4">
+        <StatusBadge status={job.status} />
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {new Date(quotation.createdAt).toLocaleDateString()}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        <QuotationActionButtons 
-          quotation={quotation}
-          onApprove={onApprove}
-          onDelete={onDelete}
-          onReject={onReject}
-          onView={onView}
-        />
+      <td className="px-6 py-4">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => onViewDetails(job)}
+            className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
+          >
+            <FaEye className="text-xs" />
+            <span>View</span>
+          </button>
+          
+          <button
+            onClick={() => onAssignment(job)}
+            className="flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm space-x-1"
+          >
+            <FaUsers className="text-xs" />
+            <span>Assignment</span>
+          </button>
+          
+          <button
+            onClick={() => onUpdateStatus(job)}
+            className="flex items-center px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm space-x-1"
+          >
+            <FaSyncAlt className="text-xs" />
+            <span>Status</span>
+          </button>
+
+          <button
+            onClick={() => onJobSettings(job)}
+            className="flex items-center px-3 py-1 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors shadow-sm space-x-1"
+          >
+            <FaCog className="text-xs" />
+            <span>Settings</span>
+          </button>
+        </div>
       </td>
     </tr>
   );
 };
 
-// QuotationActionButtons Component
-const QuotationActionButtons = ({ quotation, onApprove, onDelete, onReject, onView }) => {
-  return (
-    <div className="flex space-x-2 items-center">
-      {/* Add View Button - Show for all statuses */}
-      <button 
-        onClick={() => onView(quotation)}
-        className="flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm space-x-1"
-        title="View Quotation"
-      >
-        <FaEye className="text-xs" />
-        <span>View</span>
-      </button>
-
-      {/* Accept and Reject Buttons for Pending Status */}
-      {quotation.status === 'Pending' && (
-        <>
-          <button 
-            onClick={() => onApprove(quotation.quotationId)}
-            className="flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm space-x-1"
-            title="Accept Quotation"
-          >
-            <FaCheck className="text-xs" />
-            <span>Accept</span>
-          </button>
-          <button 
-            onClick={() => onReject(quotation.quotationId)}
-            className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
-            title="Reject Quotation"
-          >
-            <FaTimes className="text-xs" />
-            <span>Reject</span>
-          </button>
-        </>
-      )}
-      
-      {/* Delete Button with Icon */}
-      <button 
-        onClick={() => onDelete(quotation.quotationId)}
-        className="flex items-center px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm space-x-1"
-        title="Delete Quotation"
-      >
-        <FaTrash className="text-xs" />
-        <span>Delete</span>
-      </button>
-    </div>
-  );
-};
-
-// QuotationStatusBadge Component
-const QuotationStatusBadge = ({ status }) => {
+const StatusBadge = ({ status }) => {
   const getStatusStyles = (status) => {
     switch (status) {
-      case 'Approved':
-        return 'bg-green-100 text-green-800';
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Rejected':
-        return 'bg-red-100 text-red-800';
-      case 'Draft':
-        return 'bg-gray-100 text-gray-800';
+      case "Checked In":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Repair":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "Testing":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Completion":
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   return (
-    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusStyles(status)}`}>
+    <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusStyles(status)}`}>
       {status}
     </span>
   );
 };
 
-export default QuotationTable;
+export default ServiceJobsTable;

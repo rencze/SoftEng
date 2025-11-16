@@ -40,6 +40,12 @@ const BookingsTable = ({
         : b.statusName.localeCompare(a.statusName);
     }
 
+    if (sortConfig.key === "serviceReference") {
+      return sortConfig.direction === "asc"
+        ? a.serviceReference.localeCompare(b.serviceReference)
+        : b.serviceReference.localeCompare(a.serviceReference);
+    }
+
     const valA = a[sortConfig.key].toString().toLowerCase();
     const valB = b[sortConfig.key].toString().toLowerCase();
 
@@ -49,6 +55,7 @@ const BookingsTable = ({
   });
 
   const columns = [
+    { label: "Reference", key: "serviceReference" },
     { label: "Customer", key: "customerName" },
     { label: "Technician", key: "technicianName" },
     { label: "Date", key: "date" },
@@ -95,7 +102,7 @@ const BookingsTable = ({
           ) : (
             <tr>
               <td
-                colSpan="6"
+                colSpan="7"
                 className="text-center py-12 text-gray-500 text-sm"
               >
                 No bookings found
@@ -112,6 +119,9 @@ const BookingsTable = ({
 const TableRow = ({ booking, onAccept, onCancel, onReschedule, onComplete, onNoShow }) => {
   return (
     <tr className="hover:bg-gray-50 transition-all duration-200">
+      <td className="px-6 py-4 font-medium text-gray-800 font-mono">
+        {booking.serviceReference}
+      </td>
       <td className="px-6 py-4 font-medium text-gray-800">{booking.customerName}</td>
       <td className="px-6 py-4 text-gray-600">{booking.technicianName || "Unassigned"}</td>
       <td className="px-6 py-4 text-gray-600">

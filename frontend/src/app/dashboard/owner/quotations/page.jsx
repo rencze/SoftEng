@@ -11,7 +11,8 @@ import {
   FaSort,
   FaCheck,
   FaHistory,
-  FaArrowLeft
+  FaArrowLeft,
+  FaSync,
 } from "react-icons/fa";
 import QuotationModal from "@/components/Technician/Quotation/QuotationModal";
 import QuotationViewModal from "@/components/Technician/Quotation/QuotationViewModal";
@@ -26,13 +27,14 @@ export default function QuotationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState({ key: "issueAt", direction: "desc" });
   const [showHistory, setShowHistory] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch quotations on mount
+  // Fetch quotations on mount and when refreshTrigger changes
   useEffect(() => {
     fetchQuotations();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchQuotations = async () => {
     setLoading(true);
@@ -47,6 +49,11 @@ export default function QuotationsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Handle sorting
@@ -70,6 +77,12 @@ export default function QuotationsPage() {
     return quotation.guestContact || quotation.phone || quotation.displayContact || 'N/A';
   };
 
+  // Helper function to get display date
+  const getDisplayDate = (quotation) => {
+    const date = quotation.issueAt || quotation.createdAt;
+    return date ? new Date(date).toLocaleDateString() : 'N/A';
+  };
+
   // Status badge colors
   const getStatusColor = (status) => {
     switch (status) {
@@ -81,7 +94,6 @@ export default function QuotationsPage() {
         return "bg-red-100 text-red-800";
       case "Expired":
         return "bg-gray-100 text-gray-800";
-      case "Draft":
       default:
         return "bg-blue-100 text-blue-800";
     }
@@ -89,7 +101,7 @@ export default function QuotationsPage() {
 
   // Separate quotations into active and history
   const activeQuotations = quotations.filter(q => 
-    ["Pending", "Draft"].includes(q.status)
+    q.status === "Pending"
   );
 
   const historyQuotations = quotations.filter(q => 
@@ -102,7 +114,9 @@ export default function QuotationsPage() {
       (quote.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCustomerName(quote)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCustomerEmail(quote)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quote.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        quote.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (quote.serviceRequestId && quote.serviceRequestId.toString().includes(searchTerm.toLowerCase())) ||
+        (quote.serviceRequestNumber && quote.serviceRequestNumber.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (statusFilter === "all" || quote.status === statusFilter)
   );
 
@@ -112,60 +126,43 @@ export default function QuotationsPage() {
       (quote.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCustomerName(quote)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCustomerEmail(quote)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quote.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        quote.bookingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (quote.serviceRequestId && quote.serviceRequestId.toString().includes(searchTerm.toLowerCase())) ||
+        (quote.serviceRequestNumber && quote.serviceRequestNumber.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (statusFilter === "all" || quote.status === statusFilter)
   );
 
   // Sort quotations
-  const sortedActiveQuotations = [...filteredActiveQuotations].sort((a, b) => {
-    if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
+  const sortQuotations = (quotationsToSort) => {
+    return [...quotationsToSort].sort((a, b) => {
+      if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
 
-    if (sortConfig.key === "createdAt") {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
-    }
+      if (sortConfig.key === "issueAt" || sortConfig.key === "createdAt") {
+        const dateA = new Date(a.issueAt || a.createdAt);
+        const dateB = new Date(b.issueAt || b.createdAt);
+        return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
+      }
 
-    if (sortConfig.key === "totalCost") {
-      return sortConfig.direction === "asc" 
-        ? (a.totalCost || 0) - (b.totalCost || 0)
-        : (b.totalCost || 0) - (a.totalCost || 0);
-    }
+      if (sortConfig.key === "totalCost") {
+        return sortConfig.direction === "asc" 
+          ? (a.totalCost || 0) - (b.totalCost || 0)
+          : (b.totalCost || 0) - (a.totalCost || 0);
+      }
 
-    const valA = a[sortConfig.key]?.toString().toLowerCase() || '';
-    const valB = b[sortConfig.key]?.toString().toLowerCase() || '';
+      const valA = a[sortConfig.key]?.toString().toLowerCase() || '';
+      const valB = b[sortConfig.key]?.toString().toLowerCase() || '';
 
-    return sortConfig.direction === "asc"
-      ? valA.localeCompare(valB)
-      : valB.localeCompare(valA);
-  });
+      return sortConfig.direction === "asc"
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    });
+  };
 
-  const sortedHistoryQuotations = [...filteredHistoryQuotations].sort((a, b) => {
-    if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
-
-    if (sortConfig.key === "createdAt") {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA;
-    }
-
-    if (sortConfig.key === "totalCost") {
-      return sortConfig.direction === "asc" 
-        ? (a.totalCost || 0) - (b.totalCost || 0)
-        : (b.totalCost || 0) - (a.totalCost || 0);
-    }
-
-    const valA = a[sortConfig.key]?.toString().toLowerCase() || '';
-    const valB = b[sortConfig.key]?.toString().toLowerCase() || '';
-
-    return sortConfig.direction === "asc"
-      ? valA.localeCompare(valB)
-      : valB.localeCompare(valA);
-  });
+  const sortedActiveQuotations = sortQuotations(filteredActiveQuotations);
+  const sortedHistoryQuotations = sortQuotations(filteredHistoryQuotations);
 
   // Quotation summary counts
   const pendingCount = quotations.filter(q => q.status === "Pending").length;
-  const draftCount = quotations.filter(q => q.status === "Draft").length;
   const approvedCount = quotations.filter(q => q.status === "Approved").length;
   const rejectedCount = quotations.filter(q => q.status === "Rejected").length;
   const expiredCount = quotations.filter(q => q.status === "Expired").length;
@@ -253,6 +250,16 @@ export default function QuotationsPage() {
         </div>
         
         <div className="flex gap-4">
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center px-4 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors shadow-sm"
+            title="Refresh quotations"
+          >
+            <FaSync className="mr-2" />
+            Refresh
+          </button>
+
           {/* History Toggle Button */}
           {!showHistory ? (
             <button
@@ -282,7 +289,7 @@ export default function QuotationsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {/* Pending */}
         <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
@@ -297,23 +304,6 @@ export default function QuotationsPage() {
             <p className="text-gray-500 font-medium text-sm mb-1">Pending</p>
             <p className="text-3xl font-bold text-gray-800">{pendingCount}</p>
             <p className="text-xs text-gray-400 mt-1">Awaiting approval</p>
-          </div>
-        </div>
-
-        {/* Draft */}
-        <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 hover:border-gray-200 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 opacity-5 transform translate-x-16 -translate-y-16">
-            <FaFileAlt className="text-blue-500 text-7xl" />
-          </div>
-          <div className="flex items-start justify-between mb-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <FaFileAlt className="text-white text-2xl" />
-            </div>
-          </div>
-          <div>
-            <p className="text-gray-500 font-medium text-sm mb-1">Draft</p>
-            <p className="text-3xl font-bold text-gray-800">{draftCount}</p>
-            <p className="text-xs text-gray-400 mt-1">In progress</p>
           </div>
         </div>
 
@@ -389,10 +379,7 @@ export default function QuotationsPage() {
           >
             <option value="all">All Status</option>
             {!showHistory ? (
-              <>
-                <option value="Pending">Pending</option>
-                <option value="Draft">Draft</option>
-              </>
+              <option value="Pending">Pending</option>
             ) : (
               <>
                 <option value="Approved">Approved</option>
@@ -424,6 +411,7 @@ export default function QuotationsPage() {
               getCustomerName={getCustomerName}
               getCustomerEmail={getCustomerEmail}
               getCustomerPhone={getCustomerPhone}
+              getDisplayDate={getDisplayDate}
               getStatusColor={getStatusColor}
               isHistory={false}
             />
@@ -463,6 +451,7 @@ export default function QuotationsPage() {
               getCustomerName={getCustomerName}
               getCustomerEmail={getCustomerEmail}
               getCustomerPhone={getCustomerPhone}
+              getDisplayDate={getDisplayDate}
               getStatusColor={getStatusColor}
               isHistory={true}
             />
@@ -517,6 +506,7 @@ const QuotationTable = ({
   getCustomerName,
   getCustomerEmail,
   getCustomerPhone,
+  getDisplayDate,
   getStatusColor,
   isHistory = false
 }) => {
@@ -529,7 +519,7 @@ const QuotationTable = ({
     { label: "Customer", key: "customerName" },
     { label: "Amount", key: "totalCost" },
     { label: "Status", key: "status" },
-    { label: "Date", key: "createdAt" },
+    { label: "Date", key: "issueAt" },
     { label: "Actions", key: "actions" },
   ];
 
@@ -575,6 +565,7 @@ const QuotationTable = ({
               getCustomerName={getCustomerName}
               getCustomerEmail={getCustomerEmail}
               getCustomerPhone={getCustomerPhone}
+              getDisplayDate={getDisplayDate}
               getStatusColor={getStatusColor}
               isHistory={isHistory}
             />
@@ -595,6 +586,7 @@ const QuotationTableRow = ({
   getCustomerName, 
   getCustomerEmail, 
   getCustomerPhone,
+  getDisplayDate,
   getStatusColor,
   isHistory = false
 }) => {
@@ -609,6 +601,11 @@ const QuotationTableRow = ({
             {quotation.bookingNumber}
           </div>
         )}
+        {quotation.serviceRequestId && (
+          <div className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full inline-block mt-1">
+            {quotation.serviceRequestNumber || `SR-${quotation.serviceRequestId}`}
+          </div>
+        )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="font-medium text-gray-900">
@@ -620,7 +617,16 @@ const QuotationTableRow = ({
         <div className="text-xs text-gray-400">
           {getCustomerPhone(quotation)}
         </div>
-        {quotation.customerId ? (
+        {quotation.address && (
+          <div className="text-xs text-gray-500 mt-1">
+            📍 {quotation.address}
+          </div>
+        )}
+        {quotation.serviceRequestId ? (
+          <span className="inline-block mt-1 text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+            Service Request Customer
+          </span>
+        ) : quotation.customerId ? (
           <span className="inline-block mt-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
             Registered Customer
           </span>
@@ -643,7 +649,7 @@ const QuotationTableRow = ({
         </span>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {new Date(quotation.createdAt).toLocaleDateString()}
+        {getDisplayDate(quotation)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <div className="flex space-x-2">

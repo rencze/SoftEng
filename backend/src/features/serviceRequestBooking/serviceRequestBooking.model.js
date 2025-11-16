@@ -141,12 +141,13 @@ async function getAllServiceRequestsModel() {
         ts.startTime,
         ts.endTime,
 
-        -- Services JSON array
+        -- Services JSON array - FIXED: Include consistent serviceId
         COALESCE(
             JSON_ARRAYAGG(
                 IF(srs.Id IS NOT NULL,
                     JSON_OBJECT(
                         'id', srs.Id,
+                        'serviceId', s.servicesId,  -- ✅ Always use 'serviceId'
                         'serviceName', s.servicesName,
                         'serviceDescription', s.servicesDescription,
                         'quantity', srs.quantity
@@ -157,12 +158,13 @@ async function getAllServiceRequestsModel() {
             JSON_ARRAY()
         ) AS services,
 
-        -- Service Packages JSON array
+        -- Service Packages JSON array - FIXED: Include consistent servicePackageId
         COALESCE(
             JSON_ARRAYAGG(
                 IF(srp.Id IS NOT NULL,
                     JSON_OBJECT(
                         'id', srp.Id,
+                        'servicePackageId', sp.servicePackageId,  -- ✅ Always use 'servicePackageId'
                         'packageName', sp.packageName,
                         'packageDescription', sp.packageDescription,
                         'quantity', srp.quantity
@@ -217,6 +219,16 @@ async function getAllServiceRequestsModel() {
       // Filter out null values from JSON_ARRAYAGG
       const filteredServices = services.filter(service => service !== null);
       const filteredPackages = servicePackages.filter(pkg => pkg !== null);
+
+      // Debug: Log the IDs to verify they're present
+      console.log('🔍 DEBUG - Filtered Services:', filteredServices.map(s => ({
+        serviceId: s.serviceId,
+        serviceName: s.serviceName
+      })));
+      console.log('🔍 DEBUG - Filtered Packages:', filteredPackages.map(p => ({
+        servicePackageId: p.servicePackageId,
+        packageName: p.packageName
+      })));
 
       // Create description from services or packages
       let description = '';
@@ -287,12 +299,13 @@ async function getServiceRequestByIdModel(serviceRequestId) {
         ts.startTime,
         ts.endTime,
 
-        -- Services JSON array
+        -- Services JSON array - FIXED: Include consistent serviceId
         COALESCE(
             JSON_ARRAYAGG(
                 IF(srs.Id IS NOT NULL,
                     JSON_OBJECT(
                         'id', srs.Id,
+                        'serviceId', s.servicesId,  -- ✅ Always use 'serviceId'
                         'serviceName', s.servicesName,
                         'serviceDescription', s.servicesDescription,
                         'quantity', srs.quantity
@@ -303,12 +316,13 @@ async function getServiceRequestByIdModel(serviceRequestId) {
             JSON_ARRAY()
         ) AS services,
 
-        -- Service Packages JSON array
+        -- Service Packages JSON array - FIXED: Include consistent servicePackageId
         COALESCE(
             JSON_ARRAYAGG(
                 IF(srp.Id IS NOT NULL,
                     JSON_OBJECT(
                         'id', srp.Id,
+                        'servicePackageId', sp.servicePackageId,  -- ✅ Always use 'servicePackageId'
                         'packageName', sp.packageName,
                         'packageDescription', sp.packageDescription,
                         'quantity', srp.quantity
@@ -395,7 +409,6 @@ async function getServiceRequestByIdModel(serviceRequestId) {
     conn.release();
   }
 }
-
 
 // Get service requests by customer
 async function getServiceRequestsByCustomerModel(customerId) {

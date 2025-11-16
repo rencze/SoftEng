@@ -1,11 +1,59 @@
 const db = require("../../config/db");
 
 // ===============================
-// 🔹 QUOTATION CRUD OPERATIONS
+// 🔹 EXPIRATION HELPER FUNCTIONS
 // ===============================
 
-// Get all quotations with related data - FIXED VERSION
+// Check if a quotation is expired based on issue date and validity
+function isQuotationExpired(quotation) {
+  if (!quotation.issueAt || !quotation.validity) return false;
+  
+  const issueDate = new Date(quotation.issueAt);
+  const expiryDate = new Date(issueDate);
+  expiryDate.setDate(issueDate.getDate() + quotation.validity);
+  
+  return new Date() > expiryDate;
+}
+
+// Automatically update expired quotations
+async function updateExpiredQuotations() {
+  try {
+    const [expiredQuotations] = await db.query(`
+      SELECT quotationId, issueAt, validity, status 
+      FROM quotation 
+      WHERE status IN ('Pending')
+      AND DATE_ADD(issueAt, INTERVAL validity DAY) < CURDATE()
+    `);
+
+    if (expiredQuotations.length > 0) {
+      const expiredIds = expiredQuotations.map(q => q.quotationId);
+      
+      await db.query(`
+        UPDATE quotation 
+        SET status = 'Expired', updatedAt = CURRENT_TIMESTAMP 
+        WHERE quotationId IN (?)
+      `, [expiredIds]);
+
+      console.log(`Updated ${expiredQuotations.length} quotations to Expired status`);
+    }
+
+    return expiredQuotations.length;
+  } catch (error) {
+    console.error('Error updating expired quotations:', error);
+    return 0;
+  }
+}
+
+// ===============================
+// 🔹 UPDATED QUOTATION CRUD OPERATIONS WITH serviceRequestId
+// ===============================
+
+// Get all quotations with related data - UPDATED with serviceRequestId
+// Get all quotations with related data - UPDATED with proper service request joins
 async function getAllQuotations() {
+  // First, update any expired quotations
+  await updateExpiredQuotations();
+
   const [rows] = await db.query(`
     SELECT 
       q.quotationId,
@@ -23,53 +71,94 @@ async function getAllQuotations() {
       q.workTimeEstimation,
       q.quote,
       q.status,
-      q.createdAt,
+      q.validity,
+      q.issueAt,
       q.updatedAt,
-      q.approvedAt,
+      
       -- Generate quotation number
       CONCAT('QTN-', LPAD(q.quotationId, 4, '0')) AS quotationNumber,
+      
       -- Generate booking number if bookingId exists
       CASE 
         WHEN q.bookingId IS NOT NULL THEN CONCAT('BK-', LPAD(q.bookingId, 4, '0'))
         ELSE NULL 
       END AS bookingNumber,
+      
+      -- Calculate expiry date
+      DATE_ADD(q.issueAt, INTERVAL q.validity DAY) AS expiryDate,
+      
+      -- Check if expired
+      CASE 
+        WHEN q.status = 'Pending' AND DATE_ADD(q.issueAt, INTERVAL q.validity DAY) < CURDATE() THEN 'Expired'
+        ELSE q.status
+      END AS displayStatus,
+      
       -- Technician name
       CONCAT(ut.firstName, ' ', ut.lastName) AS technicianName,
-      -- SIMPLIFIED: Customer name handling
+      
+      -- ✅ FIXED: Customer name handling with service request priority
       CASE 
+        -- If quotation has serviceRequestId, get customer data from service request
+        WHEN q.serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
+        -- If quotation has customerId directly, use that
         WHEN q.customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
+        -- Otherwise use guest name
         ELSE q.guestName
       END AS customerName,
-      -- SIMPLIFIED: Email handling
+      
+      -- ✅ FIXED: Email handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.email
         WHEN q.customerId IS NOT NULL THEN uc.email
         ELSE q.guestEmail
       END AS email,
-      -- SIMPLIFIED: Contact handling
+      
+      -- ✅ FIXED: Contact handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.contactNumber
         WHEN q.customerId IS NOT NULL THEN uc.contactNumber
         ELSE q.guestContact
       END AS phone,
-      -- Address (only for registered customers)
+      
+      -- ✅ FIXED: Address handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.address
         WHEN q.customerId IS NOT NULL THEN uc.address
-        ELSE 'Guest Customer'
-      END AS address
+        ELSE NULL
+      END AS address,
+      
+      -- ✅ ADDED: Service request number
+      CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN CONCAT('SR-', LPAD(q.serviceRequestId, 4, '0'))
+        ELSE NULL
+      END AS serviceRequestNumber
+
     FROM quotation q
+    
     -- Join technicians -> users for technician name
     LEFT JOIN technicians t ON q.technicianId = t.technicianId
     LEFT JOIN users ut ON t.userId = ut.userId
-    -- Join customers -> users for customer name (LEFT JOIN to handle guest customers)
+    
+    -- ✅ ADDED: Join service request to get customer data from service request
+    LEFT JOIN serviceRequestBooking srb ON q.serviceRequestId = srb.serviceRequestId
+    LEFT JOIN customers sr_c ON srb.customerId = sr_c.customerId
+    LEFT JOIN users sr_cu ON sr_c.userId = sr_cu.userId
+    
+    -- Join customers -> users for direct customer data (fallback)
     LEFT JOIN customers c ON q.customerId = c.customerId
     LEFT JOIN users uc ON c.userId = uc.userId
-    ORDER BY q.createdAt DESC
+    
+    ORDER BY q.issueAt DESC
   `);
   return rows;
 }
 
-// Get single quotation by ID - FIXED VERSION
+// Get single quotation by ID with all related data - UPDATED with serviceRequestId
 // Get single quotation by ID with all related data - UPDATED
 async function getQuotationById(id) {
+  // First, update expired quotations
+  await updateExpiredQuotations();
+
   // Get the main quotation data
   const [quotationRows] = await db.query(`
     SELECT 
@@ -81,30 +170,64 @@ async function getQuotationById(id) {
         WHEN q.bookingId IS NOT NULL THEN CONCAT('BK-', LPAD(q.bookingId, 4, '0'))
         ELSE NULL 
       END AS bookingNumber,
+      -- Calculate expiry date
+      DATE_ADD(q.issueAt, INTERVAL q.validity DAY) AS expiryDate,
+      -- Check if expired
+      CASE 
+        WHEN q.status = 'Pending' AND DATE_ADD(q.issueAt, INTERVAL q.validity DAY) < CURDATE() THEN 'Expired'
+        ELSE q.status
+      END AS displayStatus,
       -- Technician name
       CONCAT(ut.firstName, ' ', ut.lastName) AS technicianName,
-      -- SIMPLIFIED: Customer name handling
+      
+      -- ✅ FIXED: Customer name handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN CONCAT(sr_cu.firstName, ' ', sr_cu.lastName)
         WHEN q.customerId IS NOT NULL THEN CONCAT(uc.firstName, ' ', uc.lastName)
         ELSE q.guestName
       END AS customerName,
-      -- SIMPLIFIED: Email handling
+      
+      -- ✅ FIXED: Email handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.email
         WHEN q.customerId IS NOT NULL THEN uc.email
         ELSE q.guestEmail
       END AS email,
-      -- SIMPLIFIED: Contact handling
+      
+      -- ✅ FIXED: Contact handling with service request priority
       CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.contactNumber
         WHEN q.customerId IS NOT NULL THEN uc.contactNumber
         ELSE q.guestContact
-      END AS phone
+      END AS phone,
+      
+      -- ✅ FIXED: Address handling with service request priority
+      CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN sr_cu.address
+        WHEN q.customerId IS NOT NULL THEN uc.address
+        ELSE NULL
+      END AS address,
+      
+      -- ✅ ADDED: Service request number
+      CASE 
+        WHEN q.serviceRequestId IS NOT NULL THEN CONCAT('SR-', LPAD(q.serviceRequestId, 4, '0'))
+        ELSE NULL
+      END AS serviceRequestNumber
+
     FROM quotation q
     -- Join technicians -> users for technician name
     LEFT JOIN technicians t ON q.technicianId = t.technicianId
     LEFT JOIN users ut ON t.userId = ut.userId
-    -- Join customers -> users for customer name
+    
+    -- ✅ ADDED: Join service request to get customer data from service request
+    LEFT JOIN serviceRequestBooking srb ON q.serviceRequestId = srb.serviceRequestId
+    LEFT JOIN customers sr_c ON srb.customerId = sr_c.customerId
+    LEFT JOIN users sr_cu ON sr_c.userId = sr_cu.userId
+    
+    -- Join customers -> users for direct customer data
     LEFT JOIN customers c ON q.customerId = c.customerId
     LEFT JOIN users uc ON c.userId = uc.userId
+    
     WHERE q.quotationId = ?
   `, [id]);
 
@@ -154,7 +277,7 @@ async function getQuotationById(id) {
   };
 }
 
-// Create new quotation - UPDATED to set status as "Pending" (isModified removed)
+// Create new quotation - UPDATED to include serviceRequestId
 async function createQuotation(quotationData) {
   const {
     serviceRequestId,
@@ -168,11 +291,11 @@ async function createQuotation(quotationData) {
     discount = 0,
     workTimeEstimation,
     quote,
-    validity,
+    validity = 30,
     services = [],
     servicePackages = [],
     customParts = [],
-    status = 'Pending' // REMOVED: isModified parameter
+    status = 'Pending'
   } = quotationData;
 
   // Calculate parts cost from services, packages, and custom parts
@@ -192,25 +315,24 @@ async function createQuotation(quotationData) {
   try {
     await connection.beginTransaction();
 
-    // Insert quotation with status as 'Pending' (isModified removed)
+    // Insert quotation with serviceRequestId
     const [result] = await connection.query(
       `INSERT INTO quotation 
       (serviceRequestId, bookingId, technicianId, customerId, guestName, guestContact, guestEmail, 
-        laborCost, partsCost, discount, totalCost, workTimeEstimation, quote, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        laborCost, partsCost, discount, totalCost, workTimeEstimation, quote, status, validity)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         serviceRequestId, bookingId, technicianId, customerId, 
         guestName, guestContact, guestEmail,
         laborCost, totalPartsCost, discount, totalCost, 
-        workTimeEstimation, quote, status // REMOVED: isModified field
+        workTimeEstimation, quote, status, validity
       ]
     );
 
     const quotationId = result.insertId;
 
-    // Insert services with names and descriptions from services table
+    // Insert services
     for (const service of services) {
-      // Get service details from services table
       const [serviceDetails] = await connection.query(
         "SELECT servicesName, servicesDescription FROM services WHERE servicesId = ?",
         [service.servicesId || service.serviceId]
@@ -227,14 +349,13 @@ async function createQuotation(quotationData) {
           serviceDetail?.servicesName || service.serviceName || 'Unknown Service',
           serviceDetail?.servicesDescription || service.serviceDescription || '',
           service.price || 0,
-          1 // Default quantity
+          1
         ]
       );
     }
 
-    // Insert service packages with names and descriptions from service_packages table
+    // Insert service packages
     for (const pkg of servicePackages) {
-      // Get package details from service_packages table
       const [packageDetails] = await connection.query(
         "SELECT packageName, packageDescription FROM service_packages WHERE servicePackageId = ?",
         [pkg.servicePackageId || pkg.packageId]
@@ -250,13 +371,13 @@ async function createQuotation(quotationData) {
           pkg.servicePackageId || pkg.packageId,
           packageDetail?.packageName || pkg.packageName || 'Unknown Package',
           packageDetail?.packageDescription || pkg.packageDescription || '',
-          1, // Default quantity
+          1,
           pkg.price || 0
         ]
       );
     }
 
-    // Insert custom parts using quotation_parts table
+    // Insert custom parts
     for (const part of customParts) {
       await connection.query(
         `INSERT INTO quotation_parts (quotationId, partId, quantity, unitPrice) 
@@ -281,9 +402,10 @@ async function createQuotation(quotationData) {
   }
 }
 
-// Update quotation - UPDATED to remove isModified field
+// Update quotation - UPDATED to include serviceRequestId
 async function updateQuotation(id, quotationData) {
   const {
+    serviceRequestId,
     technicianId,
     customerId,
     guestName,
@@ -294,8 +416,8 @@ async function updateQuotation(id, quotationData) {
     discount = 0,
     workTimeEstimation,
     quote,
-    status
-    // REMOVED: isModified parameter
+    status,
+    validity = 30
   } = quotationData;
 
   // Calculate total cost
@@ -303,14 +425,16 @@ async function updateQuotation(id, quotationData) {
 
   await db.query(
     `UPDATE quotation SET 
+    serviceRequestId = ?,
     technicianId = ?, customerId = ?, guestName = ?, guestContact = ?, guestEmail = ?,
     laborCost = ?, partsCost = ?, discount = ?, totalCost = ?, 
-    workTimeEstimation = ?, quote = ?, status = ?, updatedAt = CURRENT_TIMESTAMP
+    workTimeEstimation = ?, quote = ?, status = ?, validity = ?, updatedAt = CURRENT_TIMESTAMP
     WHERE quotationId = ?`,
     [
+      serviceRequestId,
       technicianId, customerId, guestName, guestContact, guestEmail,
       laborCost, partsCost, discount, totalCost, 
-      workTimeEstimation, quote, status, id // REMOVED: isModified field
+      workTimeEstimation, quote, status, validity, id
     ]
   );
 
@@ -328,16 +452,16 @@ async function deleteQuotation(id) {
   return { message: "Quotation deleted successfully" };
 }
 
-// Approve quotation - UPDATED to remove isModified field
+// Approve quotation
 async function approveQuotation(id) {
   await db.query(
-    "UPDATE quotation SET status = 'Approved', approvedAt = CURRENT_TIMESTAMP WHERE quotationId = ?",
+    "UPDATE quotation SET status = 'Approved' WHERE quotationId = ?",
     [id]
   );
   return getQuotationById(id);
 }
 
-// Reject quotation - UPDATED to remove isModified field
+// Reject quotation
 async function rejectQuotation(id) {
   await db.query(
     "UPDATE quotation SET status = 'Rejected' WHERE quotationId = ?",
@@ -350,7 +474,7 @@ async function rejectQuotation(id) {
 // 🔹 QUOTATION SERVICES OPERATIONS
 // ===============================
 
-// Add service to quotation - UPDATED to remove isModified field
+// Add service to quotation
 async function addServiceToQuotation(quotationId, serviceData) {
   const { serviceId, quantity = 1, price = 0 } = serviceData;
 
@@ -375,7 +499,7 @@ async function addServiceToQuotation(quotationId, serviceData) {
     ]
   );
 
-  // Update quotation parts cost (isModified logic removed)
+  // Update quotation parts cost
   await updateQuotationCosts(quotationId);
 
   return { id: result.insertId, quotationId, serviceId, quantity, price };
@@ -392,14 +516,14 @@ async function getQuotationServices(quotationId) {
   return rows;
 }
 
-// Remove service from quotation - UPDATED to remove isModified field
+// Remove service from quotation
 async function removeServiceFromQuotation(quotationId, serviceId) {
   await db.query(
     "DELETE FROM quotation_services WHERE quotationId = ? AND serviceId = ?",
     [quotationId, serviceId]
   );
 
-  // Update quotation parts cost (isModified logic removed)
+  // Update quotation parts cost
   await updateQuotationCosts(quotationId);
 
   return { message: "Service removed from quotation" };
@@ -409,7 +533,7 @@ async function removeServiceFromQuotation(quotationId, serviceId) {
 // 🔹 QUOTATION PACKAGES OPERATIONS
 // ===============================
 
-// Add package to quotation - UPDATED to remove isModified field
+// Add package to quotation
 async function addPackageToQuotation(quotationId, packageData) {
   const { servicePackageId, quantity = 1, price = 0 } = packageData;
 
@@ -434,7 +558,7 @@ async function addPackageToQuotation(quotationId, packageData) {
     ]
   );
 
-  // Update quotation parts cost (isModified logic removed)
+  // Update quotation parts cost
   await updateQuotationCosts(quotationId);
 
   return { id: result.insertId, quotationId, servicePackageId, quantity, price };
@@ -451,14 +575,14 @@ async function getQuotationPackages(quotationId) {
   return rows;
 }
 
-// Remove package from quotation - UPDATED to remove isModified field
+// Remove package from quotation
 async function removePackageFromQuotation(quotationId, packageId) {
   await db.query(
     "DELETE FROM quotation_packages WHERE quotationId = ? AND servicePackageId = ?",
     [quotationId, packageId]
   );
 
-  // Update quotation parts cost (isModified logic removed)
+  // Update quotation parts cost
   await updateQuotationCosts(quotationId);
 
   return { message: "Package removed from quotation" };
@@ -530,13 +654,18 @@ async function getQuotationsByCustomer(customerId) {
       -- Generate quotation number
       CONCAT('QTN-', LPAD(q.quotationId, 4, '0')) AS quotationNumber,
       -- Fix: Join through users table for technician name
-      CONCAT(ut.firstName, ' ', ut.lastName) AS technicianName
+      CONCAT(ut.firstName, ' ', ut.lastName) AS technicianName,
+      -- ✅ ADDED: Address for customer quotations
+      uc.address
     FROM quotation q
     -- Join technicians -> users for technician name
     LEFT JOIN technicians t ON q.technicianId = t.technicianId
     LEFT JOIN users ut ON t.userId = ut.userId
+    -- Join customers -> users for customer name and address
+    LEFT JOIN customers c ON q.customerId = c.customerId
+    LEFT JOIN users uc ON c.userId = uc.userId
     WHERE q.customerId = ?
-    ORDER BY q.createdAt DESC
+    ORDER BY q.issueAt DESC
   `, [customerId]);
   return rows;
 }
@@ -549,15 +678,52 @@ async function getQuotationsByTechnician(technicianId) {
       -- Generate quotation number
       CONCAT('QTN-', LPAD(q.quotationId, 4, '0')) AS quotationNumber,
       -- Fix: Join through users table for customer name
-      CONCAT(uc.firstName, ' ', uc.lastName) AS customerName
+      CONCAT(uc.firstName, ' ', uc.lastName) AS customerName,
+      -- ✅ ADDED: Address for technician quotations
+      uc.address
     FROM quotation q
     -- Join customers -> users for customer name
     LEFT JOIN customers c ON q.customerId = c.customerId
     LEFT JOIN users uc ON c.userId = uc.userId
     WHERE q.technicianId = ?
-    ORDER BY q.createdAt DESC
+    ORDER BY q.issueAt DESC
   `, [technicianId]);
   return rows;
+}
+
+// ===============================
+// 🔹 NEW EXPIRATION CONTROLLER FUNCTIONS
+// ===============================
+
+// Manually check and update expired quotations
+async function checkExpiredQuotations() {
+  try {
+    const expiredCount = await updateExpiredQuotations();
+    return { message: `Checked and updated ${expiredCount} expired quotations` };
+  } catch (error) {
+    throw new Error(`Error checking expired quotations: ${error.message}`);
+  }
+}
+
+// Get quotation expiry info
+async function getQuotationExpiryInfo(quotationId) {
+  const [rows] = await db.query(`
+    SELECT 
+      quotationId,
+      issueAt,
+      validity,
+      DATE_ADD(issueAt, INTERVAL validity DAY) AS expiryDate,
+      DATEDIFF(DATE_ADD(issueAt, INTERVAL validity DAY), CURDATE()) AS daysUntilExpiry,
+      CASE 
+        WHEN DATE_ADD(issueAt, INTERVAL validity DAY) < CURDATE() THEN 'Expired'
+        WHEN DATEDIFF(DATE_ADD(issueAt, INTERVAL validity DAY), CURDATE()) <= 7 THEN 'Expiring Soon'
+        ELSE 'Valid'
+      END AS expiryStatus
+    FROM quotation 
+    WHERE quotationId = ?
+  `, [quotationId]);
+
+  return rows[0] || null;
 }
 
 module.exports = {
@@ -577,4 +743,7 @@ module.exports = {
   getQuotationParts,
   getQuotationsByCustomer,
   getQuotationsByTechnician,
+  checkExpiredQuotations,
+  getQuotationExpiryInfo,
+  updateExpiredQuotations
 };

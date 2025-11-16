@@ -13,6 +13,8 @@ const slotDatesRoutes = require("./src/features/slotDates/slotDates.routes");
 const serviceRequestBookingRoutes = require("./src/features/serviceRequestBooking/serviceRequestBooking.routes")
 const bookingRoutes = require("./src/features/booking/booking.routes");
 const quotationRoutes = require("./src/features/quotation/quotation.routes");
+const serviceJobRoutes = require("./src/features/serviceJob/serviceJob.routes");
+
 // const paymentsRoutes = require("./src/features/payments/payments.routes");
 
 const app = express();
@@ -37,6 +39,7 @@ app.use("/api/slot-dates", slotDatesRoutes);
 app.use("/api/service-request-bookings", serviceRequestBookingRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/quotations", quotationRoutes);
+app.use("/api/service-jobs", serviceJobRoutes);
 // app.use("/api/payments", paymentsRoutes);
 
 module.exports = app;

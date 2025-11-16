@@ -33,7 +33,12 @@ export default function BookingManagementPage() {
   const fetchBookings = async () => {
     try {
       const res = await axios.get(API_URL);
-      setBookings(res.data);
+      // Add service reference number to each booking
+      const bookingsWithReference = res.data.map((booking, index) => ({
+        ...booking,
+        serviceReference: `BK-00${booking.bookingId || index + 1}`
+      }));
+      setBookings(bookingsWithReference);
     } catch (err) {
       console.error("Error fetching bookings:", err);
     }
@@ -78,6 +83,7 @@ export default function BookingManagementPage() {
   const filteredActiveBookings = activeBookings.filter((b) => {
     const s = search.toLowerCase();
     return (
+      b.serviceReference?.toLowerCase().includes(s) ||
       b.customerName?.toLowerCase().includes(s) ||
       b.technicianName?.toLowerCase().includes(s) ||
       b.statusName?.toLowerCase().includes(s) ||
@@ -89,6 +95,7 @@ export default function BookingManagementPage() {
   const filteredHistoryBookings = historyBookings.filter((b) => {
     const s = search.toLowerCase();
     return (
+      b.serviceReference?.toLowerCase().includes(s) ||
       b.customerName?.toLowerCase().includes(s) ||
       b.technicianName?.toLowerCase().includes(s) ||
       b.statusName?.toLowerCase().includes(s) ||

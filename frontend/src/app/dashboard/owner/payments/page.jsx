@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FaSearch, FaFilter, FaDownload, FaEye, FaReceipt, FaCreditCard, FaMoneyBillWave, FaWallet, FaCalendar, FaExchangeAlt, FaPlus, FaFileInvoice, FaQuoteLeft } from "react-icons/fa";
+import { FaSearch, FaFilter, FaDownload, FaEye, FaReceipt, FaCreditCard, FaMoneyBillWave, FaWallet, FaCalendar, FaExchangeAlt, FaPlus, FaFileInvoice } from "react-icons/fa";
 
 export default function PaymentHistoryPage() {
   const [payments, setPayments] = useState([]);
@@ -17,7 +17,6 @@ export default function PaymentHistoryPage() {
   const [activeTable, setActiveTable] = useState("payments");
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAddInvoice, setShowAddInvoice] = useState(false);
-  const [showAddQuotation, setShowAddQuotation] = useState(false);
 
   // Sample data
   useEffect(() => {
@@ -354,16 +353,6 @@ export default function PaymentHistoryPage() {
     >
       <FaFileInvoice className="mr-2" />
       Create Invoice
-    </button>
-  );
-
-  const AddQuotationButton = () => (
-    <button
-      onClick={() => setShowAddQuotation(true)}
-      className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition"
-    >
-      <FaQuoteLeft className="mr-2" />
-      Create Quotation
     </button>
   );
 
@@ -929,7 +918,7 @@ export default function PaymentHistoryPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">
-            {activeTable === "payments" ? "Sales Transactions" : "Transaction History"}
+            {activeTable === "payments" ? "Invoice" : "Sales Transaction History"}
           </h1>
           <p className="text-gray-600">
             {activeTable === "payments" 
@@ -938,7 +927,6 @@ export default function PaymentHistoryPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <AddQuotationButton />
           <AddInvoiceButton />
           <AddPaymentButton />
           <TableToggleButton />
